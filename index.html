@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MMG Radio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: radial-gradient(circle, black 40%, red 55%, orange 65%, yellow 72%, green 80%, blue 88%, purple 96%);
+      color: white;
+      text-align: center;
+    }
+
+    #player {
+      background: rgba(0, 0, 0, 0.85);
+      padding: 30px;
+      border-radius: 25px;
+      width: 320px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.2);
+      backdrop-filter: blur(12px);
+      animation: fadeIn 1.5s ease;
+    }
+
+    #logo {
+      width: 120px;
+      margin-bottom: 20px;
+      animation: pulse 3s infinite;
+    }
+
+    #cover {
+      width: 220px;
+      height: 220px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      object-fit: cover;
+      box-shadow: 0 0 20px rgba(255,255,255,0.4);
+      transition: transform 0.4s ease;
+    }
+    #cover:hover {
+      transform: scale(1.05);
+    }
+
+    h2 {
+      margin: 10px 0;
+      font-size: 22px;
+      font-weight: bold;
+      text-shadow: 0 0 10px rgba(255,255,255,0.6);
+    }
+
+    #playBtn {
+      background: linear-gradient(135deg, #ff3d3d, #ff9d00, #ffe600, #33ff3d, #007bff, #9d00ff);
+      color: black;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      padding: 12px 25px;
+      border-radius: 30px;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+      box-shadow: 0 0 15px rgba(255,255,255,0.4);
+    }
+
+    #playBtn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(255,255,255,0.7);
+    }
+
+    #volume {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      margin-top: 20px;
+      background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);
+      border-radius: 10px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    #volume::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      border: 2px solid #000;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    #volume::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(20px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    @keyframes pulse {
+      0%, 100% { filter: drop-shadow(0 0 5px white);}
+      50% { filter: drop-shadow(0 0 15px white);}
+    }
+  </style>
+</head>
+<body>
+  <div id="player">
+    <!-- Replace with your logo -->
+    <img id="logo" src="your-logo.png" alt="MMG Radio Logo">
+
+    <img id="cover" src="https://via.placeholder.com/220" alt="Album Art">
+
+    <h2 id="title">MMG Radio</h2>
+
+    <audio id="audio" preload="none" crossorigin="anonymous">
+      <source src="https://cdnstream1.typicalmedia.net/mmgradio" type="audio/mpeg">
+    </audio>
+
+    <button id="playBtn">▶ Play</button>
+    <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+  </div>
+
+  <script>
+    const audio = document.getElementById("audio");
+    const playBtn = document.getElementById("playBtn");
+    const volumeSlider = document.getElementById("volume");
+
+    playBtn.addEventListener("click", () => {
+      if (audio.paused) {
+        audio.play();
+        playBtn.textContent = "⏸ Pause";
+      } else {
+        audio.pause();
+        playBtn.textContent = "▶ Play";
+      }
+    });
+
+    volumeSlider.addEventListener("input", () => {
+      audio.volume = volumeSlider.value;
+    });
+  </script>
+</body>
+</html>
