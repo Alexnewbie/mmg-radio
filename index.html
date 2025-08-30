@@ -7,7 +7,7 @@
   <style>
     body {
       margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -16,23 +16,17 @@
       color: white;
       text-align: center;
     }
-
-    #player {
-      background: rgba(0, 0, 0, 0.85);
+    #player, #login, #admin {
+      background: rgba(0,0,0,0.85);
       padding: 30px;
       border-radius: 25px;
-      width: 320px;
-      box-shadow: 0 0 30px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.2);
-      backdrop-filter: blur(12px);
-      animation: fadeIn 1.5s ease;
+      width: 350px;
+      box-shadow: 0 0 30px rgba(0,0,0,0.9);
     }
-
     #logo {
       width: 120px;
       margin-bottom: 20px;
-      animation: pulse 3s infinite;
     }
-
     #cover {
       width: 220px;
       height: 220px;
@@ -40,97 +34,85 @@
       margin-bottom: 20px;
       object-fit: cover;
       box-shadow: 0 0 20px rgba(255,255,255,0.4);
-      transition: transform 0.4s ease;
     }
-    #cover:hover {
-      transform: scale(1.05);
-    }
-
     h2 {
       margin: 10px 0;
       font-size: 22px;
-      font-weight: bold;
-      text-shadow: 0 0 10px rgba(255,255,255,0.6);
     }
-
-    #playBtn {
+    button {
       background: linear-gradient(135deg, #ff3d3d, #ff9d00, #ffe600, #33ff3d, #007bff, #9d00ff);
       color: black;
-      font-size: 18px;
       font-weight: bold;
       border: none;
-      padding: 12px 25px;
-      border-radius: 30px;
+      padding: 10px 20px;
+      border-radius: 25px;
       cursor: pointer;
-      margin-top: 15px;
-      transition: transform 0.2s ease, box-shadow 0.3s ease;
-      box-shadow: 0 0 15px rgba(255,255,255,0.4);
+      margin: 10px 0;
     }
-
-    #playBtn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 25px rgba(255,255,255,0.7);
+    input[type=text], input[type=password], input[type=file] {
+      padding: 8px;
+      width: 90%;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: none;
     }
-
-    #volume {
-      -webkit-appearance: none;
+    input[type=range] {
       width: 100%;
-      height: 8px;
       margin-top: 20px;
-      background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);
-      border-radius: 10px;
-      outline: none;
-      cursor: pointer;
-    }
-
-    #volume::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: white;
-      border: 2px solid #000;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    #volume::-webkit-slider-thumb:hover {
-      transform: scale(1.2);
-    }
-
-    @keyframes fadeIn {
-      from {opacity: 0; transform: translateY(20px);}
-      to {opacity: 1; transform: translateY(0);}
-    }
-
-    @keyframes pulse {
-      0%, 100% { filter: drop-shadow(0 0 5px white);}
-      50% { filter: drop-shadow(0 0 15px white);}
     }
   </style>
 </head>
 <body>
+  <!-- Login Box -->
+  <div id="login" style="display:none;">
+    <h2>Admin Login</h2>
+    <input type="text" id="username" placeholder="Username"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button onclick="login()">Login</button>
+  </div>
+
+  <!-- Radio Player -->
   <div id="player">
-    <!-- Replace with your logo -->
     <img id="logo" src="your-logo.png" alt="MMG Radio Logo">
-
-    <img id="cover" src="https://via.placeholder.com/220" alt="Album Art">
-
+    <img id="cover" src="default-cover.jpg" alt="Album Art">
     <h2 id="title">MMG Radio</h2>
-
     <audio id="audio" preload="none" crossorigin="anonymous">
       <source src="https://cdnstream1.typicalmedia.net/mmgradio" type="audio/mpeg">
     </audio>
-
     <button id="playBtn">▶ Play</button>
     <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+    <br>
+    <button onclick="showLogin()">🔑 Admin</button>
+  </div>
+
+  <!-- Admin Panel -->
+  <div id="admin" style="display:none;">
+    <h2>Admin Panel</h2>
+    <p>Upload Album Cover:</p>
+    <input type="file" id="fileInput"><br>
+    <button onclick="uploadFile()">Upload File</button>
+    <p>Or enter an image URL:</p>
+    <input type="text" id="urlInput" placeholder="https://..."><br>
+    <button onclick="uploadURL()">Upload Link</button>
+    <br><br>
+    <button onclick="logout()">🚪 Logout</button>
   </div>
 
   <script>
     const audio = document.getElementById("audio");
     const playBtn = document.getElementById("playBtn");
     const volumeSlider = document.getElementById("volume");
+    const cover = document.getElementById("cover");
+    const defaultCover = "default-cover.jpg"; // fallback
 
+    // Load saved cover if exists
+    if(localStorage.getItem("coverImage")){
+      cover.src = localStorage.getItem("coverImage");
+    } else {
+      cover.src = defaultCover;
+    }
+
+    // Play/Pause
     playBtn.addEventListener("click", () => {
       if (audio.paused) {
         audio.play();
@@ -141,9 +123,55 @@
       }
     });
 
+    // Volume
     volumeSlider.addEventListener("input", () => {
       audio.volume = volumeSlider.value;
     });
+
+    // Admin login
+    function showLogin(){
+      document.getElementById("player").style.display = "none";
+      document.getElementById("login").style.display = "block";
+    }
+
+    function login(){
+      let user = document.getElementById("username").value;
+      let pass = document.getElementById("password").value;
+      if(user === "alex" && pass === "mishra"){
+        document.getElementById("login").style.display = "none";
+        document.getElementById("admin").style.display = "block";
+      } else {
+        alert("Wrong username or password!");
+      }
+    }
+
+    function logout(){
+      document.getElementById("admin").style.display = "none";
+      document.getElementById("player").style.display = "block";
+    }
+
+    // Upload with file
+    function uploadFile(){
+      const file = document.getElementById("fileInput").files[0];
+      if(file){
+        const reader = new FileReader();
+        reader.onload = function(e){
+          cover.src = e.target.result;
+          localStorage.setItem("coverImage", e.target.result);
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Upload with URL
+    function uploadURL(){
+      const url = document.getElementById("urlInput").value;
+      if(url){
+        cover.src = url;
+        localStorage.setItem("coverImage", url);
+      }
+    }
   </script>
 </body>
 </html>
+
