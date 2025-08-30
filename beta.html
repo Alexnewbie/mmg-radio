@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MMG Radio • Live Radio, Shows & Schedule</title>
+  <meta name="description" content="MMG Radio – streaming live 24/7 with music, shows, and more."/>
+  <link rel="icon" href="/favicon.ico"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              500: '#ff3d3d', 600: '#ff9d00', 700: '#ffe600', 800: '#33ff3d', 900: '#007bff'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="bg-black text-neutral-100">
+  <!-- Sticky Audio Bar -->
+  <div id="audioBar" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[min(1100px,95vw)]">
+    <div class="bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-2xl p-3 shadow-2xl">
+      <div class="flex items-center gap-3">
+        <button id="playBtn" class="h-11 w-11 rounded-full bg-brand-500 grid place-items-center" aria-label="Play/Pause">
+          <svg id="iconPlay" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"/></svg>
+          <svg id="iconPause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
+        </button>
+        <div class="min-w-0 flex-1">
+          <div class="text-sm text-neutral-400">Now Playing</div>
+          <div id="nowTitle" class="truncate font-semibold">—</div>
+        </div>
+        <input id="volume" type="range" min="0" max="1" step="0.01" class="w-28 accent-brand-500"/>
+        <a href="#schedule" class="hidden sm:inline-flex text-sm bg-neutral-800 rounded-xl px-3 py-2">Schedule</a>
+      </div>
+      <audio id="player" preload="none" crossorigin="anonymous"></audio>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-neutral-950/75 backdrop-blur border-b border-neutral-900">
+    <div class="mx-auto max-w-6xl px-4 py-4 flex items-center gap-6">
+      <a href="#" class="flex items-center gap-3 font-bold text-lg">
+        <img src="your-logo.png" alt="MMG Logo" class="h-8 w-8"/>
+        <span>MMG Radio</span>
+      </a>
+      <nav class="ml-auto hidden md:flex items-center gap-6 text-sm text-neutral-300">
+        <a class="hover:text-white" href="#live">Live</a>
+        <a class="hover:text-white" href="#shows">Shows</a>
+        <a class="hover:text-white" href="#schedule">Schedule</a>
+        <a class="hover:text-white" href="#latest">Latest</a>
+        <a class="hover:text-white" href="#contact">Contact</a>
+      </nav>
+      <button id="listenBtn" class="ml-auto md:ml-4 inline-flex items-center gap-2 bg-brand-500 text-black font-semibold px-4 py-2 rounded-xl">Listen Live</button>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section id="live" class="relative overflow-hidden">
+    <div class="mx-auto max-w-6xl px-4 pt-20 pb-28 text-center">
+      <h1 class="text-4xl sm:text-6xl font-extrabold">Welcome to MMG Radio</h1>
+      <p class="mt-4 text-neutral-300">Streaming 24/7 • Music • Shows • Community</p>
+    </div>
+  </section>
+
+  <!-- Shows Grid -->
+  <section id="shows" class="mx-auto max-w-6xl px-4 py-12">
+    <h2 class="text-2xl font-bold mb-6">Featured Shows</h2>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <article class="bg-neutral-900 rounded-2xl overflow-hidden">
+        <img src="default-cover.jpg" class="h-40 w-full object-cover" alt="Show art"/>
+        <div class="p-4">
+          <h3 class="font-semibold">Morning Drive</h3>
+          <p class="text-sm text-neutral-400 mt-1">Weekdays 8am</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Schedule -->
+  <section id="schedule" class="mx-auto max-w-6xl px-4 py-12">
+    <h2 class="text-2xl font-bold">Weekly Schedule</h2>
+    <p class="text-neutral-400 mt-2">Coming soon...</p>
+  </section>
+
+  <!-- Latest Episodes -->
+  <section id="latest" class="mx-auto max-w-6xl px-4 py-12">
+    <h2 class="text-2xl font-bold">Latest Episodes</h2>
+    <p class="text-neutral-400 mt-2">Archive coming soon...</p>
+  </section>
+
+  <!-- Contact -->
+  <section id="contact" class="mx-auto max-w-6xl px-4 py-12">
+    <h2 class="text-2xl font-bold">Song Requests</h2>
+    <form class="mt-6 grid gap-4" action="mailto:info@mmgradio.com" method="post">
+      <input class="bg-neutral-900 rounded-xl px-4 py-3" placeholder="Your Name" name="name" required>
+      <input class="bg-neutral-900 rounded-xl px-4 py-3" placeholder="Email" type="email" name="email" required>
+      <input class="bg-neutral-900 rounded-xl px-4 py-3" placeholder="Song Request" name="request" required>
+      <button class="bg-brand-500 text-black font-semibold px-5 py-3 rounded-xl w-max">Send</button>
+    </form>
+  </section>
+
+  <footer class="border-t border-neutral-900 py-10 text-center text-sm text-neutral-400">
+    <p>© <span id="year"></span> MMG Radio</p>
+  </footer>
+
+  <script>
+    const STREAM_URL = 'https://cdnstream1.typicalmedia.net/mmgradio';
+    const player = document.getElementById('player');
+    const playBtn = document.getElementById('playBtn');
+    const listenBtn = document.getElementById('listenBtn');
+    const iconPlay = document.getElementById('iconPlay');
+    const iconPause = document.getElementById('iconPause');
+    const volume = document.getElementById('volume');
+    const nowTitle = document.getElementById('nowTitle');
+
+    player.src = STREAM_URL;
+    player.volume = 0.7;
+
+    function setPlayingUI(isPlaying){
+      iconPlay.classList.toggle('hidden', isPlaying);
+      iconPause.classList.toggle('hidden', !isPlaying);
+    }
+
+    playBtn.addEventListener('click', async () => {
+      if (player.paused) {
+        await player.play();
+        setPlayingUI(true);
+      } else {
+        player.pause();
+        setPlayingUI(false);
+      }
+    });
+
+    listenBtn.addEventListener('click', async () => {
+      await player.play();
+      setPlayingUI(true);
+    });
+
+    volume.addEventListener('input', (e) => { player.volume = parseFloat(e.target.value); });
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
