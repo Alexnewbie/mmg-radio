@@ -4,13 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MMG Radio</title>
-  <link rel="icon" href="/logo.svg" />
+  <link rel="icon" href="your-logo.png" />
 
   <!-- ✅ TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    /* Custom Animations */
     @keyframes slideUp {
       from { transform: translateY(100%); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
@@ -21,9 +20,6 @@
     }
     .logo-slide { animation: slideUp 1s ease-out forwards; }
     .screen-fade { animation: fadeOut 1s ease-in forwards; }
-    /* Visualizer styling */
-    #visualizer { width:100%; height:80px; border-radius:8px; margin-top:12px; background:rgba(255,255,255,0.05);}
-    /* Live badge */
     .live-badge { background:linear-gradient(90deg,#ef4444,#f97316); color:white; font-size:11px; font-weight:700; padding:2px 8px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px;}
   </style>
 </head>
@@ -31,7 +27,7 @@
 
   <!-- Loading Screen -->
   <div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]">
-    <img src="/logo.svg" alt="MMG Logo" class="h-24 w-24 opacity-0" id="loadingLogo">
+    <img src="your-logo.png" alt="MMG Logo" class="h-24 w-24 opacity-0" id="loadingLogo">
   </div>
 
   <!-- Sticky Audio Bar -->
@@ -51,6 +47,7 @@
           Vol
           <input id="volume" type="range" min="0" max="1" step="0.01" class="w-24 accent-brand-500" value="0.7">
         </label>
+        <button id="requestBtnBar" class="hidden sm:inline-flex text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Request Song</button>
         <a id="listenBtn" href="#" target="_blank" class="hidden sm:inline-flex text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Open Stream</a>
       </div>
       <audio id="player" preload="none" crossorigin="anonymous"></audio>
@@ -58,29 +55,22 @@
   </div>
 
   <!-- Hero -->
-  <section id="live" class="relative overflow-hidden">
-    <div class="absolute inset-0 -z-10">
-      <img src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=2070&auto=format&fit=crop" alt="Studio background" class="h-full w-full object-cover opacity-30">
-      <div class="absolute inset-0 bg-gradient-to-b from-neutral-900/70 via-neutral-950/70 to-neutral-950"></div>
-    </div>
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-28 text-center">
-      <p class="text-brand-300 font-semibold">Live Internet Radio</p>
-      <h1 class="mt-3 text-4xl sm:text-6xl font-extrabold leading-tight animate-pulse">Music &amp; Talk That Moves Your City</h1>
-    </div>
+  <section class="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-28 text-center">
+    <h1 class="mt-3 text-4xl sm:text-6xl font-extrabold leading-tight animate-pulse">Music &amp; Talk That Moves Your City</h1>
   </section>
 
   <!-- Now Playing -->
   <section class="mx-auto max-w-6xl px-4 sm:px-6 py-12">
     <div class="grid md:grid-cols-[120px,1fr] gap-6 items-center">
       <div class="aspect-square rounded-2xl overflow-hidden bg-neutral-800">
-        <img id="nowArt" src="/artwork.jpg" alt="Now playing artwork" class="h-full w-full object-cover">
+        <img id="nowArt" src="your-logo.png" alt="Now playing artwork" class="h-full w-full object-cover">
       </div>
       <div>
         <h2 class="text-2xl font-bold flex items-center gap-3">On Air <span id="liveBadge" class="live-badge hidden">LIVE</span></h2>
         <p id="nowArtist" class="mt-2 text-neutral-400">—</p>
         <p id="nowTrack" class="text-lg font-semibold">—</p>
         <p id="djRow" class="text-sm text-neutral-400 hidden">DJ: <span id="djName"></span></p>
-        <canvas id="visualizer" class="visualizer"></canvas>
+        <canvas id="visualizer" class="w-full h-20 mt-4 rounded-lg bg-neutral-800"></canvas>
       </div>
     </div>
   </section>
@@ -94,29 +84,36 @@
   </div>
 
 <script>
-const API = 'https://azura.typicalmedia.net/api/nowplaying/mmg_radio';
+const API='https://azura.typicalmedia.net/api/nowplaying/mmg_radio';
 const player=document.getElementById('player');
 const playBtn=document.getElementById('playBtn'),iconPlay=document.getElementById('iconPlay'),iconPause=document.getElementById('iconPause');
-const volume=document.getElementById('volume'),nowTitle=document.getElementById('nowTitle'),nowArtist=document.getElementById('nowArtist'),nowTrack=document.getElementById('nowTrack'),nowArt=document.getElementById('nowArt');
+const volume=document.getElementById('volume');
+const nowTitle=document.getElementById('nowTitle'),nowArtist=document.getElementById('nowArtist'),nowTrack=document.getElementById('nowTrack'),nowArt=document.getElementById('nowArt');
 const liveBadge=document.getElementById('liveBadge'),liveBadgeBar=document.getElementById('liveBadgeBar');
 const djRow=document.getElementById('djRow'),djName=document.getElementById('djName'),nowDJBar=document.getElementById('nowDJBar');
 const listenBtn=document.getElementById('listenBtn');
+const requestBtnBar=document.getElementById('requestBtnBar');
+const requestPopupOverlay=document.getElementById('requestPopupOverlay'),requestPopupClose=document.getElementById('requestPopupClose');
 const visualizer=document.getElementById('visualizer');
 const loadingScreen=document.getElementById('loadingScreen'),loadingLogo=document.getElementById('loadingLogo');
 
 let currentStream=null,audioCtx,analyzer,sourceNode;
 
-function setPlayingUI(isPlaying){iconPlay.classList.toggle('hidden',isPlaying);iconPause.classList.toggle('hidden',!isPlaying);}
+function setPlayingUI(p){iconPlay.classList.toggle('hidden',p);iconPause.classList.toggle('hidden',!p);}
 playBtn.onclick=async()=>{if(player.paused){try{if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();analyzer=audioCtx.createAnalyser();analyzer.fftSize=256;sourceNode=audioCtx.createMediaElementSource(player);sourceNode.connect(analyzer);analyzer.connect(audioCtx.destination);startVisualizer();}else if(audioCtx.state==='suspended'){await audioCtx.resume();}await player.play();setPlayingUI(true);}catch(e){console.warn(e);}}else{player.pause();setPlayingUI(false);}};
 volume.oninput=e=>player.volume=parseFloat(e.target.value);
 
+requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
+requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
+requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay)requestPopupOverlay.classList.add('hidden');};
+
 function get(o,p,f){return p.split('.').reduce((x,y)=>x?x[y]:undefined,o)||f;}
 function sanitizeUrl(u){try{return new URL(u,location.href).href}catch{return u}}
-async function fetchNow(){try{let r=await fetch(API,{cache:'no-store'}),d=await r.json();nowTitle.textContent=get(d,'station.name','MMG Radio');nowTrack.textContent=get(d,'now_playing.song.title','—');nowArtist.textContent=get(d,'now_playing.song.artist','—');let art=get(d,'now_playing.song.art');if(art)nowArt.src=sanitizeUrl(art);let dj=get(d,'live.streamer_name')||get(d,'now_playing.dj');if(dj){djRow.classList.remove('hidden');djName.textContent=dj;nowDJBar.textContent=dj;nowDJBar.classList.remove('hidden');}else{djRow.classList.add('hidden');nowDJBar.classList.add('hidden');}let live=get(d,'live.is_live');liveBadge.classList.toggle('hidden',!live);liveBadgeBar.classList.toggle('hidden',!live);let stream=get(d,'station.listen_url');if(stream&&stream!==currentStream){currentStream=stream;player.src=currentStream;listenBtn.href=currentStream;listenBtn.classList.remove('hidden');}}catch(e){console.warn('API error',e);}setTimeout(fetchNow,7000);}
-function startVisualizer(){let ctx=visualizer.getContext('2d');function draw(){requestAnimationFrame(draw);let arr=new Uint8Array(analyzer.frequencyBinCount);analyzer.getByteFrequencyData(arr);ctx.clearRect(0,0,visualizer.width,visualizer.height);let bw=visualizer.width/arr.length*2,x=0;arr.forEach(v=>{let h=v/255*visualizer.height;ctx.fillStyle=`hsl(${300-v/2},80%,50%)`;ctx.fillRect(x,visualizer.height-h,bw,h);x+=bw+1;});}draw();}
+async function fetchNow(){try{let r=await fetch(API,{cache:'no-store'}),d=await r.json();nowTitle.textContent=get(d,'station.name','MMG Radio');nowTrack.textContent=get(d,'now_playing.song.title','—');nowArtist.textContent=get(d,'now_playing.song.artist','—');let art=get(d,'now_playing.song.art');if(art)nowArt.src=sanitizeUrl(art);let dj=get(d,'live.streamer_name')||get(d,'now_playing.dj');if(dj){djRow.classList.remove('hidden');djName.textContent=dj;nowDJBar.textContent=dj;nowDJBar.classList.remove('hidden');}else{djRow.classList.add('hidden');nowDJBar.classList.add('hidden');}let live=get(d,'live.is_live');liveBadge.classList.toggle('hidden',!live);liveBadgeBar.classList.toggle('hidden',!live);let stream=get(d,'station.listen_url');if(stream&&stream!==currentStream){currentStream=stream;player.src=currentStream;listenBtn.href=currentStream;listenBtn.classList.remove('hidden');requestBtnBar.classList.remove('hidden');}}catch(e){console.warn('API error',e);}setTimeout(fetchNow,7000);}
+function startVisualizer(){const ctx=visualizer.getContext('2d');function resize(){visualizer.width=visualizer.clientWidth;visualizer.height=visualizer.clientHeight;}resize();window.addEventListener('resize',resize);function draw(){requestAnimationFrame(draw);let arr=new Uint8Array(analyzer.frequencyBinCount);analyzer.getByteFrequencyData(arr);ctx.clearRect(0,0,visualizer.width,visualizer.height);let barWidth=Math.max(2,visualizer.width/arr.length*2),x=0;for(let i=0;i<arr.length;i+=4){let v=arr[i]/255;let h=v*visualizer.height;ctx.fillStyle=`hsl(${280-v*100},80%,50%)`;ctx.fillRect(x,visualizer.height-h,barWidth,h);x+=barWidth+1;}}draw();}
 fetchNow();
 
-// Loading screen animation
+// Loading animation
 window.addEventListener('load',()=>{loadingLogo.classList.add('logo-slide');setTimeout(()=>{loadingScreen.classList.add('screen-fade');setTimeout(()=>loadingScreen.remove(),1000);},1500);});
 </script>
 </body>
