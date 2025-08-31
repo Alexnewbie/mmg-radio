@@ -1,95 +1,105 @@
-// public.js
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Listener Page</title>
+  <link rel="stylesheet" href="style.css"> <!-- your CSS -->
+</head>
+<body>
+  <div id="app">
+    <!-- AzuraCast Player will mount here -->
+  </div>
 
-document.addEventListener("DOMContentLoaded", () => {
-  // =========================
-  // 1. Service Worker
-  // =========================
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/public/sw.js");
+  <!-- Your Custom JS -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // =========================
+      // 1. Service Worker
+      // =========================
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/public/sw.js");
+        });
+      }
+
+      // =========================
+      // 2. Branding / Footer Links
+      // =========================
+      const footerPara = document.querySelector("p.text-center.m-0");
+      if (footerPara) {
+        footerPara.innerHTML = "";
+
+        const tmLink = document.createElement("a");
+        tmLink.href = "https://typicalmedia.net";
+        tmLink.target = "_blank";
+        tmLink.textContent = "Typical Media Group";
+
+        const mbLink = document.createElement("a");
+        mbLink.href = "#";
+        mbLink.target = "_blank";
+        mbLink.textContent = "MOCGON";
+
+        const clientNote = document.createElement("p");
+        clientNote.textContent = "TMG Casters Clients Only";
+        clientNote.style.marginTop = "16px";
+
+        const logo = document.createElement("img");
+        logo.src = "https://i.typicalmedia.net/TMG_NEW.png";
+        logo.alt = "Typical Media Group Logo";
+        logo.style.width = "220px";
+        logo.style.height = "auto";
+
+        const logoWrap = document.createElement("div");
+        logoWrap.style.display = "flex";
+        logoWrap.style.justifyContent = "center";
+        logoWrap.style.marginTop = "12px";
+        logoWrap.appendChild(logo);
+
+        footerPara.appendChild(tmLink);
+        footerPara.appendChild(document.createTextNode(" & "));
+        footerPara.appendChild(mbLink);
+        footerPara.appendChild(clientNote);
+        footerPara.appendChild(logoWrap);
+      }
+
+      // =========================
+      // 3. Remove Azura Default Alerts
+      // =========================
+      const alertInfo = document.querySelector(".alert-info");
+      if (alertInfo) alertInfo.remove();
+
+      // =========================
+      // 4. Album Art Background Sync
+      // =========================
+      const artContainerSel = ".now-playing-art";
+      const artImgSel = ".now-playing-art img.album_art";
+      const cardSel = ".radio-player-widget .card";
+
+      function updateCardBg() {
+        const artImg = document.querySelector(artImgSel);
+        const card = document.querySelector(cardSel);
+        if (artImg && card) {
+          card.style.setProperty("--album-art-url", `url('${artImg.src}')`);
+          card.classList.add("with-bg");
+        }
+      }
+
+      const observer = new MutationObserver(updateCardBg);
+      const initObservers = () => {
+        const artImg = document.querySelector(artImgSel);
+        const artContainer = document.querySelector(artContainerSel);
+
+        if (artImg) {
+          observer.observe(artImg, { attributes: true, attributeFilter: ["src"] });
+        }
+        if (artContainer) {
+          observer.observe(artContainer, { childList: true, subtree: true });
+        }
+        updateCardBg();
+      };
+
+      setTimeout(initObservers, 500);
     });
-  }
-
-  // =========================
-  // 2. Branding / Footer Links
-  // =========================
-  const footerPara = document.querySelector("p.text-center.m-0");
-  if (footerPara) {
-    footerPara.innerHTML = "";
-
-    // Typical Media
-    const tmLink = document.createElement("a");
-    tmLink.href = "https://typicalmedia.net";
-    tmLink.target = "_blank";
-    tmLink.textContent = "Typical Media Group";
-
-    // Muffin Brands
-    const mbLink = document.createElement("a");
-    mbLink.href = "#";
-    mbLink.target = "_blank";
-    mbLink.textContent = "MOCGON";
-
-    // Text + Logo
-    const clientNote = document.createElement("p");
-    clientNote.textContent = "TMG Casters Clients Only";
-    clientNote.style.marginTop = "16px";
-
-    const logo = document.createElement("img");
-    logo.src = "https://i.typicalmedia.net/TMG_NEW.png";
-    logo.alt = "Typical Media Group Logo";
-    logo.style.width = "220px";
-    logo.style.height = "auto";
-
-    const logoWrap = document.createElement("div");
-    logoWrap.style.display = "flex";
-    logoWrap.style.justifyContent = "center";
-    logoWrap.style.marginTop = "12px";
-    logoWrap.appendChild(logo);
-
-    // Append all
-    footerPara.appendChild(tmLink);
-    footerPara.appendChild(document.createTextNode(" & "));
-    footerPara.appendChild(mbLink);
-    footerPara.appendChild(clientNote);
-    footerPara.appendChild(logoWrap);
-  }
-
-  // =========================
-  // 3. Remove Azura Default Alerts
-  // =========================
-  const alertInfo = document.querySelector(".alert-info");
-  if (alertInfo) alertInfo.remove();
-
-  // =========================
-  // 4. Album Art Background Sync
-  // =========================
-  const artContainerSel = ".now-playing-art";
-  const artImgSel = ".now-playing-art img.album_art";
-  const cardSel = ".radio-player-widget .card";
-
-  function updateCardBg() {
-    const artImg = document.querySelector(artImgSel);
-    const card = document.querySelector(cardSel);
-    if (artImg && card) {
-      card.style.setProperty("--album-art-url", `url('${artImg.src}')`);
-      card.classList.add("with-bg");
-    }
-  }
-
-  // Observe changes in album art
-  const observer = new MutationObserver(updateCardBg);
-  const initObservers = () => {
-    const artImg = document.querySelector(artImgSel);
-    const artContainer = document.querySelector(artContainerSel);
-
-    if (artImg) {
-      observer.observe(artImg, { attributes: true, attributeFilter: ["src"] });
-    }
-    if (artContainer) {
-      observer.observe(artContainer, { childList: true, subtree: true });
-    }
-    updateCardBg();
-  };
-
-  setTimeout(initObservers, 500); // wait for Vue to mount
-});
+  </script>
+</body>
+</html>
