@@ -6,21 +6,27 @@
   <title>MMG Radio</title>
   <link rel="icon" href="your-logo.png" />
 
-  <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
     /* Animations */
-    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
     @keyframes moveToTopLeft {
-      0% { transform: translate(-50%, -50%) scale(1); top: 50%; left: 50%; }
-      100% { transform: translate(0,0) scale(0.25); top: 1rem; left: 1rem; }
+      0% { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); }
+      100% { top: 1rem; left: 1rem; transform: translate(0, 0) scale(0.25); }
     }
-    .logo-slide { animation: slideUp 1s ease-out forwards; }
-    .screen-fade { animation: fadeOut 1s ease-in forwards; }
     .logo-move { animation: moveToTopLeft 1s ease-out forwards; }
-    .live-badge { background:linear-gradient(90deg,#ef4444,#f97316); color:white; font-size:11px; font-weight:700; padding:2px 8px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px;}
+
+    .live-badge {
+      background: linear-gradient(90deg,#ef4444,#f97316);
+      color:white;
+      font-size:11px;
+      font-weight:700;
+      padding:2px 8px;
+      border-radius:9999px;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
 
     /* Station Off Overlay */
     #stationOffOverlay {
@@ -45,7 +51,10 @@
       border-radius: 50%;
       animation: twinkle 2s infinite;
     }
-    @keyframes twinkle { 0%,100%{opacity:0.2;} 50%{opacity:1;} }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
+    }
   </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
@@ -55,13 +64,13 @@
     <img src="your-logo.png" class="h-12 w-12 object-contain">
   </div>
 
-  <!-- Loading Screen -->
+  <!-- Loading Screen Logo -->
   <div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]">
     <img src="your-logo.png" alt="MMG Logo" class="h-24 w-24" id="loadingLogo">
   </div>
 
-  <!-- Station Off Overlay -->
-  <div id="stationOffOverlay">Station Off</div>
+  <!-- Station Offline Overlay -->
+  <div id="stationOffOverlay">Station Offline</div>
 
   <!-- Sticky Audio Bar -->
   <div id="audioBar" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[min(1100px,95vw)]">
@@ -167,6 +176,41 @@ requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay)requestPopupOv
 function get(o,p,f){return p.split('.').reduce((x,y)=>x?x[y]:undefined,o)||f;}
 function sanitizeUrl(u){try{return new URL(u,location.href).href}catch{return u}}
 
+// Visualizer
+function startVisualizer(){
+  const ctx=visualizer.getContext('2d');
+  function resize(){visualizer.width=visualizer.clientWidth;visualizer.height=visualizer.clientHeight;}
+  resize();
+  window.addEventListener('resize',resize);
+  function draw(){
+    requestAnimationFrame(draw);
+    let arr=new Uint8Array(analyzer.frequencyBinCount);
+    analyzer.getByteFrequencyData(arr);
+    ctx.clearRect(0,0,visualizer.width,visualizer.height);
+    let barWidth=Math.max(2,visualizer.width/arr.length*2),x=0;
+    for(let i=0;i<arr.length;i+=4){
+      let v=arr[i]/255;
+      let h=v*visualizer.height;
+      ctx.fillStyle=`hsl(${280-v*100},80%,50%)`;
+      ctx.fillRect(x,visualizer.height-h,barWidth,h);
+      x+=barWidth+1;
+    }
+  }
+  draw();
+}
+
+// Stars
+function generateStars(count=100){
+  for(let i=0;i<count;i++){
+    const s=document.createElement('div');
+    s.className='star';
+    s.style.top=Math.random()*100+'%';
+    s.style.left=Math.random()*100+'%';
+    s.style.animationDuration=(1+Math.random()*2)+'s';
+    stationOffOverlay.appendChild(s);
+  }
+}
+
 // Fetch Now Playing
 async function fetchNow(){
   try{
@@ -177,8 +221,8 @@ async function fetchNow(){
     nowArtist.textContent=get(d,'now_playing.song.artist','—');
     let art=get(d,'now_playing.song.art'); if(art) nowArt.src=sanitizeUrl(art);
 
-    // Toggle Station Off if title is "!StationOff"
-    if(title==='!StationOff'){
+    // Station Offline toggle
+    if(title==='Station Offline'){
       stationOffOverlay.style.display='flex';
     } else {
       stationOffOverlay.style.display='none';
@@ -204,41 +248,17 @@ async function fetchNow(){
   setTimeout(fetchNow,7000);
 }
 
-// Visualizer
-function startVisualizer(){
-  const ctx=visualizer.getContext('2d');
-  function resize(){visualizer.width=visualizer.clientWidth;visualizer.height=visualizer.clientHeight;}
-  resize();
-  window.addEventListener('resize',resize);
-  function draw(){
-    requestAnimationFrame(draw);
-    let arr=new Uint8Array(analyzer.frequencyBinCount);
-    analyzer.getByteFrequencyData(arr);
-    ctx.clearRect(0,0,visualizer.width,visualizer.height);
-    let barWidth=Math.max(2,visualizer.width/arr.length*2),x=0;
-    for(let i=0;i<arr.length;i+=4){
-      let v=arr[i]/255;
-      let h=v*visualizer.height;
-      ctx.fillStyle=`hsl(${280-v*100},80%,50%)`;
-      ctx.fillRect(x,visualizer.height-h,barWidth,h);
-      x+=barWidth+1;
-    }
-  }
-  draw();
-}
-
-// Stars for Station Off
-function generateStars(count=100){
-  for(let i=0;i<count;i++){
-    const s=document.createElement('div');
-    s.className='star';
-    s.style.top=Math.random()*100+'%';
-    s.style.left=Math.random()*100+'%';
-    s.style.animationDuration=(1+Math.random()*2)+'s';
-    stationOffOverlay.appendChild(s);
-  }
-}
-
-// Loading animation
+// Loading animation + move logo
 window.addEventListener('load',()=>{
-  loadingLogo.class
+  generateStars(100);
+  loadingLogo.classList.add('logo-move');
+  setTimeout(()=>{
+    loadingScreen.classList.add('screen-fade');
+    setTimeout(()=>loadingScreen.remove(),1000);
+  },1200);
+});
+
+fetchNow();
+</script>
+</body>
+</html>
