@@ -8,15 +8,13 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-/* Loading screen logo fade */
+/* Fade-in Loading logo */
 #loadingLogo {
   opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 1s ease-out, transform 1s ease-out;
+  transition: opacity 1s ease-out;
 }
 #loadingLogo.visible {
   opacity: 1;
-  transform: scale(1);
 }
 
 /* Top-left persistent logo */
@@ -28,7 +26,7 @@
   opacity: 1;
 }
 
-/* Live badge style */
+/* Live badge */
 .live-badge {
   background: linear-gradient(90deg,#ef4444,#f97316);
   color:white; font-size:11px; font-weight:700;
@@ -70,7 +68,7 @@
   <img src="your-logo.png" alt="MMG Logo" class="h-24 w-24" id="loadingLogo">
 </div>
 
-<!-- Persistent Top-left Logo -->
+<!-- Top-left persistent logo -->
 <div id="topLogo" class="fixed top-1 left-1 z-50">
   <img src="your-logo.png" class="h-12 w-12 object-contain" id="logoImg">
 </div>
@@ -105,11 +103,6 @@
     <audio id="player" preload="none" crossorigin="anonymous"></audio>
   </div>
 </div>
-
-<!-- Hero -->
-<section class="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-28 text-center">
-  <h1 class="mt-3 text-4xl sm:text-6xl font-extrabold leading-tight animate-pulse">Music &amp; Talk That Moves Your City</h1>
-</section>
 
 <!-- Now Playing -->
 <section class="mx-auto max-w-6xl px-4 sm:px-6 py-12">
@@ -153,7 +146,7 @@ const topLogo=document.getElementById('topLogo');
 
 let currentStream=null,audioCtx,analyzer,sourceNode;
 
-// PLAY/PAUSE
+// Play/Pause
 function setPlayingUI(p){iconPlay.classList.toggle('hidden',p);iconPause.classList.toggle('hidden',!p);}
 playBtn.onclick=async()=>{
   if(player.paused){
@@ -174,11 +167,69 @@ playBtn.onclick=async()=>{
 };
 volume.oninput=e=>player.volume=parseFloat(e.target.value);
 
-// REQUEST POPUP
+// Request Popup
 requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
 requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
 requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay) requestPopupOverlay.classList.add('hidden');};
 
-// Loading Screen Fade
+// Loading Logo Fade
 window.addEventListener('load',()=>{
-  loadingLogo.class
+  loadingLogo.classList.add('visible');
+  setTimeout(()=>{
+    loadingScreen.style.transition='opacity 1s ease-out';
+    loadingScreen.style.opacity=0;
+    setTimeout(()=>loadingScreen.remove(),1000);
+    topLogo.classList.add('visible');
+  },1500);
+});
+
+// Visualizer
+function startVisualizer(){
+  const ctx=visualizer.getContext('2d');
+  function resize(){visualizer.width=visualizer.clientWidth; visualizer.height=visualizer.clientHeight;}
+  resize();
+  window.addEventListener('resize',resize);
+  function draw(){
+    requestAnimationFrame(draw);
+    let arr=new Uint8Array(analyzer.frequencyBinCount);
+    analyzer.getByteFrequencyData(arr);
+    ctx.clearRect(0,0,visualizer.width,visualizer.height);
+    let barWidth=Math.max(2,visualizer.width/arr.length*2),x=0;
+    for(let i=0;i<arr.length;i+=4){
+      let v=arr[i]/255; let h=v*visualizer.height;
+      ctx.fillStyle=`hsl(${280-v*100},80%,50%)`;
+      ctx.fillRect(x,visualizer.height-h,barWidth,h);
+      x+=barWidth+1;
+    }
+  }
+  draw();
+}
+
+// Fetch Now Playing + Offline Mode
+async function fetchNow(){
+  try{
+    let r=await fetch(API,{cache:'no-store'}),d=await r.json();
+    let title=d.now_playing?.song?.title||'—';
+    nowTitle.textContent=d.station?.name||'MMG Radio';
+    nowTrack.textContent=title==='Station Offline'?'—':d.now_playing?.song?.title||'—';
+    nowArtist.textContent=d.now_playing?.song?.artist||'—';
+    let art=d.now_playing?.song?.art;
+    if(art) nowArt.src=art;
+    let dj=d.live?.streamer_name||d.now_playing?.dj;
+    if(dj){djRow.classList.remove('hidden');djName.textContent=dj;nowDJBar.textContent=dj;nowDJBar.classList.remove('hidden');}
+    else{djRow.classList.add('hidden');nowDJBar.classList.add('hidden');}
+    let live=d.live?.is_live;
+    liveBadge.classList.toggle('hidden',!live); liveBadgeBar.classList.toggle('hidden',!live);
+    let stream=d.station?.listen_url;
+    if(stream&&stream!==currentStream){currentStream=stream;player.src=currentStream;listenBtn.href=currentStream;listenBtn.classList.remove('hidden');requestBtnBar.classList.remove('hidden');}
+
+    // Offline mode
+    if(title==='Station Offline'){stationOffOverlay.style.display='flex';} else {stationOffOverlay.style.display='none';}
+
+  } catch(e){console.warn('API error',e);}
+  setTimeout(fetchNow,7000);
+}
+fetchNow();
+</script>
+</body>
+</html>
