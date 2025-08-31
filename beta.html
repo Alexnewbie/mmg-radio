@@ -1,212 +1,205 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MMG Radio • Live Radio, Shows & Schedule</title>
-  <meta name="description" content="Streaming live radio with shows, replays, and a full weekly schedule. Listen live, browse shows, and get the latest episodes."/>
-  <meta property="og:title" content="MMG Radio – Live Now"/>
-  <meta property="og:description" content="Tune in to the live stream or catch up on recent shows."/>
-  <meta property="og:type" content="website"/>
-  <meta property="og:image" content="/og-image.jpg"/>
-  <link rel="icon" href="/favicon.ico"/>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MMG Radio - Accessible Version</title>
+<link rel="icon" href="./your-logo.png" />
+<script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Tailwind via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#eef9ff', 100: '#d9f1ff', 200: '#bce7ff', 300: '#8fd8ff', 400: '#5cc4ff',
-              500: '#2aaeff', 600: '#0a93e6', 700: '#0674b4', 800: '#065e90', 900: '#084f77'
-            }
-          },
-          boxShadow: {
-            glow: '0 0 0 4px rgba(42,174,255,0.15)'
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    html { scroll-behavior: smooth; }
-    :focus-visible { outline: 3px solid #2aaeff; outline-offset: 2px; }
-  </style>
+<style>
+/* High contrast background & text */
+body {
+  background-color:#000;
+  color:#fff;
+  font-family:sans-serif;
+  line-height:1.6;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Logo fade */
+#loadingLogo { opacity:0; transition:opacity 1s ease-out; }
+#loadingLogo.visible { opacity:1; }
+
+/* Top-left logo */
+#topLogo { opacity:0; transition:opacity 1s ease-out; top: 1rem; left: 2rem; }
+#topLogo.visible { opacity:1; }
+
+/* Live badge */
+.live-badge {
+  background: #ff0000;
+  color:#fff; font-weight:bold;
+  padding:2px 8px; border-radius:9999px;
+  display:inline-flex; align-items:center; gap:4px;
+}
+
+/* Station Offline / Night Mode */
+#stationOffOverlay {
+  position: fixed; inset: 0;
+  background: radial-gradient(circle at top, #0a0a2a, #000);
+  display: none; justify-content: center; align-items: center;
+  flex-direction: column; color: #fff; font-size: 3rem; font-weight: bold;
+  z-index: 9998; overflow: hidden;
+}
+
+/* Star animation for offline */
+.star { position:absolute; width:2px; height:2px; background:white; border-radius:50%;
+animation: twinkle linear infinite, drift linear infinite; }
+@keyframes twinkle {0%,100%{opacity:0.2;}50%{opacity:1;}}
+@keyframes drift {0%{transform:translate(0,0);}100%{transform:translate(var(--dx),var(--dy));}}
+
+/* Visualizer accessible */
+#visualizer { border-radius:0.5rem; outline:2px solid #fff; }
+</style>
 </head>
-<body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
-  <!-- Sticky Audio Bar -->
-  <div id="audioBar" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[min(1100px,95vw)]">
-    <div class="bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-2xl p-3 shadow-2xl shadow-black/50">
-      <div class="flex items-center gap-3">
-        <button id="playBtn" class="h-11 w-11 rounded-full bg-brand-500 hover:bg-brand-400 focus-visible:shadow-glow grid place-items-center" aria-label="Play/Pause">
-          <svg id="iconPlay" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"/></svg>
-          <svg id="iconPause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
-        </button>
+<body>
 
-        <div class="min-w-0 flex-1">
-          <div class="text-sm text-neutral-400">Now Playing</div>
-          <div id="nowTitle" class="truncate font-semibold">—</div>
-        </div>
+<!-- Loading Screen -->
+<div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]" role="status" aria-live="polite">
+  <img src="./your-logo.png" alt="Loading MMG Logo" class="h-24 w-24" id="loadingLogo">
+</div>
 
-        <label class="flex items-center gap-2 text-xs text-neutral-400" for="volume">
-          Vol
-          <input id="volume" type="range" min="0" max="1" step="0.01" class="w-28 accent-brand-500"/>
-        </label>
+<!-- Top-left logo -->
+<div id="topLogo" class="fixed z-50">
+  <img src="./your-logo.png" class="h-12 w-12 object-contain" id="logoImg" alt="MMG Radio Logo">
+</div>
 
-        <a href="#schedule" class="hidden sm:inline-flex text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Schedule</a>
+<!-- Station Offline Overlay -->
+<div id="stationOffOverlay" role="alert" aria-live="assertive">Station Offline</div>
+
+<!-- Sticky Audio Bar -->
+<div id="audioBar" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[min(1100px,95vw)]" role="region" aria-label="Audio Player">
+  <div class="bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-2xl p-3 shadow-2xl shadow-black/50">
+    <div class="flex items-center gap-3">
+      <button id="playBtn" class="h-11 w-11 rounded-full bg-brand-500 hover:bg-brand-400 grid place-items-center focus:outline focus:outline-2 focus:outline-white" aria-label="Play/Pause" aria-pressed="false">
+        <svg id="iconPlay" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"/></svg>
+        <svg id="iconPause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
+      </button>
+      <div class="min-w-0 flex-1">
+        <div class="text-lg font-bold" id="nowTitle" aria-live="polite">—</div>
+        <div class="text-sm" id="nowArtist" aria-live="polite">—</div>
+        <div class="text-xs text-neutral-400 hidden" id="nowDJBar"></div>
       </div>
-      <audio id="player" preload="none" crossorigin="anonymous"></audio>
+      <label class="flex items-center gap-2 text-sm" for="volume">
+        Volume
+        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume Control">
+      </label>
+      <button id="requestBtnBar" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2 focus:outline focus:outline-2 focus:outline-white">Request Song</button>
+      <a id="listenBtn" href="#" target="_blank" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2 focus:outline focus:outline-2 focus:outline-white">Open Stream</a>
+    </div>
+    <audio id="player" preload="none" crossorigin="anonymous" aria-label="Radio Stream Player"></audio>
+  </div>
+</div>
+
+<!-- Now Playing -->
+<section class="mx-auto max-w-6xl px-4 sm:px-6 py-12" role="region" aria-label="Now Playing Section">
+  <div class="grid md:grid-cols-[120px,1fr] gap-6 items-center">
+    <div class="aspect-square rounded-2xl overflow-hidden bg-neutral-800">
+      <img id="nowArt" src="./your-logo.png" alt="Now playing artwork" class="h-full w-full object-cover">
+    </div>
+    <div>
+      <h2 class="text-2xl font-bold flex items-center gap-3">On Air <span id="liveBadge" class="live-badge hidden">LIVE</span></h2>
+      <p id="nowArtist" class="mt-2">—</p>
+      <p id="nowTrack" class="text-lg font-semibold">—</p>
+      <p id="djRow" class="text-sm hidden">DJ: <span id="djName"></span></p>
+      <canvas id="visualizer" class="w-full h-20 mt-4 rounded-lg bg-neutral-800" aria-label="Audio Visualizer"></canvas>
     </div>
   </div>
+</section>
 
-  <!-- Header -->
-  <header class="sticky top-0 z-40 bg-neutral-950/75 backdrop-blur border-b border-neutral-900">
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 py-4 flex items-center gap-6">
-      <a href="#" class="flex items-center gap-3 font-bold tracking-wide text-lg">
-        <img src="/logo.svg" alt="MMG Radio Logo" class="h-8 w-8"/>
-        <span>MMG Radio</span>
-      </a>
-      <nav class="ml-auto hidden md:flex items-center gap-6 text-sm text-neutral-300">
-        <a class="hover:text-white" href="#live">Live</a>
-        <a class="hover:text-white" href="#shows">Shows</a>
-        <a class="hover:text-white" href="#schedule">Schedule</a>
-        <a class="hover:text-white" href="#latest">Latest</a>
-        <a class="hover:text-white" href="#contact">Contact</a>
-      </nav>
-      <button id="listenBtn" class="ml-auto md:ml-4 inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-400 text-neutral-900 font-semibold px-4 py-2 rounded-xl">
-        <span>Listen Live</span>
-      </button>
-    </div>
-  </header>
+<!-- Request Popup -->
+<div id="requestPopupOverlay" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999]" role="dialog" aria-modal="true" aria-label="Request Song">
+  <div class="w-11/12 max-w-md h-[70vh] bg-neutral-900 rounded-xl relative">
+    <button id="requestPopupClose" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8" aria-label="Close Request Popup">&times;</button>
+    <iframe id="requestIframe" src="request.html" class="w-full h-full border-0 rounded-xl" title="Request Song Form"></iframe>
+  </div>
+</div>
 
-  <!-- Hero -->
-  <section id="live" class="relative overflow-hidden">
-    <div class="absolute inset-0 -z-10">
-      <img src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=2070&auto=format&fit=crop" alt="Studio background" class="h-full w-full object-cover opacity-30"/>
-      <div class="absolute inset-0 bg-gradient-to-b from-neutral-900/70 via-neutral-950/70 to-neutral-950"></div>
-    </div>
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-28">
-      <div class="max-w-2xl">
-        <p class="text-brand-300 font-semibold">Live Internet Radio</p>
-        <h1 class="mt-3 text-4xl sm:text-6xl font-extrabold leading-tight">Music & Talk That Moves Your City</h1>
-        <p class="mt-4 text-neutral-300 max-w-xl">24/7 stream with weekly shows from resident DJs and hosts. Tap \"Listen Live\" to join now, or explore the schedule to catch your favorites.</p>
-        <div class="mt-8 flex items-center gap-3">
-          <a href="#shows" class="inline-flex bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 px-5 py-3 rounded-xl">Browse Shows</a>
-          <a href="#schedule" class="inline-flex bg-white/10 hover:bg-white/20 px-5 py-3 rounded-xl">Weekly Schedule</a>
-        </div>
-      </div>
-    </div>
-  </section>
+<script>
+// Same JS as before with metadata, player, visualizer, and offline overlay
+const API='https://azura.typicalmedia.net/api/nowplaying/mmg_radio';
+const player=document.getElementById('player');
+const playBtn=document.getElementById('playBtn'),iconPlay=document.getElementById('iconPlay'),iconPause=document.getElementById('iconPause');
+const volume=document.getElementById('volume');
+const nowTitle=document.getElementById('nowTitle'),nowArtist=document.getElementById('nowArtist'),nowTrack=document.getElementById('nowTrack'),nowArt=document.getElementById('nowArt');
+const liveBadge=document.getElementById('liveBadge'),liveBadgeBar=document.getElementById('liveBadgeBar');
+const djRow=document.getElementById('djRow'),djName=document.getElementById('djName'),nowDJBar=document.getElementById('nowDJBar');
+const listenBtn=document.getElementById('listenBtn');
+const requestBtnBar=document.getElementById('requestBtnBar');
+const requestPopupOverlay=document.getElementById('requestPopupOverlay'),requestPopupClose=document.getElementById('requestPopupClose');
+const visualizer=document.getElementById('visualizer');
+const loadingScreen=document.getElementById('loadingScreen'),loadingLogo=document.getElementById('loadingLogo');
+const stationOffOverlay=document.getElementById('stationOffOverlay');
+const topLogo=document.getElementById('topLogo');
 
-  <!-- Now Playing -->
-  <section class="mx-auto max-w-6xl px-4 sm:px-6 py-12">
-    <div class="grid md:grid-cols-[120px,1fr] gap-6 items-center">
-      <div class="aspect-square rounded-2xl overflow-hidden bg-neutral-800">
-        <img id="nowArt" src="/artwork.jpg" alt="Now playing artwork" class="h-full w-full object-cover"/>
-      </div>
-      <div>
-        <h2 class="text-2xl font-bold">On Air</h2>
-        <p id="nowArtist" class="mt-2 text-neutral-400">—</p>
-        <p id="nowTrack" class="text-lg font-semibold">—</p>
-        <div class="mt-4 flex flex-wrap gap-3">
-          <a href="#schedule" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">See What's Next</a>
-          <a href="#latest" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Latest Episodes</a>
-        </div>
-      </div>
-    </div>
-  </section>
+let currentStream=null,audioCtx,analyzer,sourceNode;
 
-  <!-- Shows, Schedule, Latest, Contact -->
-  <!-- (unchanged sections omitted for brevity, same as before) -->
+window.addEventListener('load',()=>{
+  loadingLogo.classList.add('visible');
+  setTimeout(()=>{loadingScreen.style.display='none'; topLogo.classList.add('visible');},1500);
+});
 
-  <footer class="border-t border-neutral-900 py-10">
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-neutral-400">
-      <p>© <span id="year"></span> MMG Radio</p>
-      <div class="flex items-center gap-3">
-        <a href="#" class="hover:text-white">Privacy</a>
-        <span aria-hidden="true">•</span>
-        <a href="#" class="hover:text-white">Terms</a>
-      </div>
-    </div>
-  </footer>
+function setPlayingUI(p){iconPlay.classList.toggle('hidden',p);iconPause.classList.toggle('hidden',!p);}
+playBtn.onclick=async()=>{
+  if(player.paused){
+    try{
+      if(!audioCtx){ audioCtx=new(window.AudioContext||window.webkitAudioContext)(); analyzer=audioCtx.createAnalyser(); sourceNode=new MediaElementAudioSourceNode(audioCtx, {mediaElement:player}); sourceNode.connect(analyzer); analyzer.connect(audioCtx.destination); startVisualizer(); }
+      else if(audioCtx.state==='suspended'){await audioCtx.resume();}
+      await player.play(); setPlayingUI(true);
+    } catch(e){ console.warn(e); }
+  } else{ player.pause(); setPlayingUI(false); }
+};
+volume.oninput=e=>player.volume=parseFloat(e.target.value);
 
-  <script>
-    // ====== CONFIG ======
-    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTnCERnBRQ6htMiF0jOpnSRDJ9Vt_lpnsi91Icrgvh-fLhTvVoHjeET4AvO5YEIbJ9WoGSP0tGDCRFa/pub?output=csv";
+requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
+requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
+requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay) requestPopupOverlay.classList.add('hidden');};
 
-    // ====== PLAYER ======
-    const player = document.getElementById('player');
-    const playBtn = document.getElementById('playBtn');
-    const listenBtn = document.getElementById('listenBtn');
-    const iconPlay = document.getElementById('iconPlay');
-    const iconPause = document.getElementById('iconPause');
-    const volume = document.getElementById('volume');
-    const nowTitle = document.getElementById('nowTitle');
-    const nowArtist = document.getElementById('nowArtist');
-    const nowTrack = document.getElementById('nowTrack');
-    const nowArt = document.getElementById('nowArt');
+async function fetchNow(){
+  try{
+    let r=await fetch(API,{cache:'no-store'}),d=await r.json();
+    let songTitle=d.now_playing.song.title || '—';
+    nowTitle.textContent=d.station.name || 'MMG Radio';
+    nowTrack.textContent=songTitle;
+    nowArtist.textContent=d.now_playing.song.artist || '—';
+    let art=d.now_playing.song.art; if(art) nowArt.src=art;
+    let dj=d.live.streamer_name||d.now_playing.dj;
+    if(dj){ djRow.classList.remove('hidden'); djName.textContent=dj; nowDJBar.textContent=dj; nowDJBar.classList.remove('hidden'); }
+    else{ djRow.classList.add('hidden'); nowDJBar.classList.add('hidden'); }
+    let live=d.live.is_live;
+    liveBadge.classList.toggle('hidden',!live); liveBadgeBar.classList.toggle('hidden',!live);
+    let stream=d.station.listen_url;
+    if(stream && stream!==currentStream){ currentStream=stream; player.src=currentStream; listenBtn.href=currentStream; listenBtn.classList.remove('hidden'); requestBtnBar.classList.remove('hidden'); }
 
-    player.volume = 0.7;
+    stationOffOverlay.style.display = songTitle.toLowerCase().includes("station offline") ? "flex" : "none";
 
-    function setPlayingUI(isPlaying){
-      iconPlay.classList.toggle('hidden', isPlaying);
-      iconPause.classList.toggle('hidden', !isPlaying);
-    }
+  } catch(e){ console.warn('API error',e);}
+  setTimeout(fetchNow,7000);
+}
 
-    playBtn.addEventListener('click', async () => {
-      if (player.paused) {
-        try { await player.play(); setPlayingUI(true);} catch(e){ console.warn(e); }
-      } else { player.pause(); setPlayingUI(false); }
-    });
+function startVisualizer(){
+  const ctx=visualizer.getContext('2d');
+  function resize(){ visualizer.width=visualizer.clientWidth; visualizer.height=visualizer.clientHeight; }
+  resize(); window.addEventListener('resize',resize);
+  function draw(){
+    requestAnimationFrame(draw);
+    let arr=new Uint8Array(analyzer.frequencyBinCount);
+    analyzer.getByteFrequencyData(arr);
+    ctx.clearRect(0,0,visualizer.width,visualizer.height);
+    let barWidth=Math.max(2,visualizer.width/arr.length*2),x=0;
+    for(let i=0;i<arr.length;i+=4){ let v=arr[i]/255; let h=v*visualizer.height; ctx.fillStyle=`hsl(${280-v*100},80%,50%)`; ctx.fillRect(x,visualizer.height-h,barWidth,h); x+=barWidth+1; }
+  }
+  draw();
+}
 
-    listenBtn.addEventListener('click', async () => {
-      try { await player.play(); setPlayingUI(true); }
-      catch(e){ console.warn(e); }
-    });
-
-    volume.addEventListener('input', (e) => { player.volume = parseFloat(e.target.value); });
-
-    // ====== GOOGLE SHEETS FETCH LOGIC ======
-    async function fetchStations() {
-      try {
-        const res = await fetch(SHEET_URL, { cache: "no-store" });
-        const text = await res.text();
-        const rows = text.trim().split("\n").map(r => r.split(","));
-
-        const headers = rows[0].map(h => h.trim().toLowerCase());
-        const nameIdx = headers.indexOf("name");
-        const urlIdx = headers.indexOf("stream_url");
-        const imgIdx = headers.indexOf("image_url");
-        const activeIdx = headers.indexOf("active");
-
-        let active = rows.slice(1).find(r => r[activeIdx]?.toLowerCase() === "true");
-
-        if (active) {
-          const name = active[nameIdx];
-          const url = active[urlIdx];
-          const img = active[imgIdx];
-
-          if (player.src !== url) {
-            player.src = url;
-            if (!player.paused) {
-              player.play().catch(() => {});
-            }
-          }
-          nowTitle.textContent = name || "Live Radio";
-          if (img) nowArt.src = img;
-        }
-      } catch (err) {
-        console.error("Error fetching stations:", err);
-      }
-    }
-
-    fetchStations();
-    setInterval(fetchStations, 20000);
-
-    // Footer year
-    document.getElementById('year').textContent = new Date().getFullYear();
-  </script>
+fetchNow();
+</script>
 </body>
 </html>
