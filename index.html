@@ -8,7 +8,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-/* Background */
+/* Background blur */
 body::before {
   content:'';
   position:fixed;
@@ -18,11 +18,11 @@ body::before {
   z-index:-1;
 }
 
-/* Fade-in Loading logo */
+/* Loading logo fade-in */
 #loadingLogo { opacity:0; transition:opacity 1s ease-out; }
 #loadingLogo.visible { opacity:1; }
 
-/* Top-left persistent logo slightly offset toward center */
+/* Top-left persistent logo slightly offset */
 #topLogo { opacity:0; transition:opacity 1s ease-out; top: 1rem; left: 2rem; }
 #topLogo.visible { opacity:1; }
 
@@ -81,6 +81,7 @@ animation: twinkle linear infinite, drift linear infinite; }
       <div class="min-w-0 flex-1">
         <div class="text-sm text-neutral-400">Now Playing <span id="liveBadgeBar" class="live-badge hidden">LIVE</span></div>
         <div id="nowTitle" class="truncate font-semibold">—</div>
+        <div id="nowArtist" class="truncate text-neutral-400">—</div>
         <div id="nowDJBar" class="text-xs text-neutral-400 hidden"></div>
       </div>
       <label class="flex items-center gap-2 text-xs text-neutral-400" for="volume">
@@ -119,47 +120,89 @@ animation: twinkle linear infinite, drift linear infinite; }
 </div>
 
 <script>
-// Fading loading logo
-const loadingLogo=document.getElementById('loadingLogo');
-const loadingScreen=document.getElementById('loadingScreen');
-const topLogo=document.getElementById('topLogo');
-window.addEventListener('load',()=>{
-  loadingLogo.classList.add('visible');
-  setTimeout(()=>{
-    loadingScreen.style.display='none';
-    topLogo.classList.add('visible');
-  },1500);
-});
-
-// Visualizer
-const visualizer=document.getElementById('visualizer');
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const analyzer = audioCtx.createAnalyser();
-const player = document.getElementById('player');
-let sourceNode;
-function startVisualizer(){
-  if(!sourceNode){ sourceNode = audioCtx.createMediaElementSource(player); sourceNode.connect(analyzer); analyzer.connect(audioCtx.destination); }
-  const ctx = visualizer.getContext('2d');
-  function resize(){ visualizer.width = visualizer.clientWidth; visualizer.height = visualizer.clientHeight; }
-  resize(); window.addEventListener('resize',resize);
-  function draw(){ requestAnimationFrame(draw); let arr = new Uint8Array(analyzer.frequencyBinCount); analyzer.getByteFrequencyData(arr); ctx.clearRect(0,0,visualizer.width,visualizer.height); let barWidth=Math.max(2, visualizer.width/arr.length*2), x=0; for(let i=0;i<arr.length;i+=4){ let v=arr[i]/255; let h=v*visualizer.height; ctx.fillStyle=`hsl(${280-v*100},80%,50%)`; ctx.fillRect(x,visualizer.height-h,barWidth,h); x+=barWidth+1; } }
-  draw();
-}
-player.onplay = ()=>{ if(audioCtx.state==='suspended'){audioCtx.resume();} startVisualizer(); };
-
-// Simple Play/Pause
+const API='https://azura.typicalmedia.net/api/nowplaying/mmg_radio';
+const player=document.getElementById('player');
 const playBtn=document.getElementById('playBtn'),iconPlay=document.getElementById('iconPlay'),iconPause=document.getElementById('iconPause');
-playBtn.onclick=async()=>{
-  if(player.paused){ await player.play(); iconPlay.classList.add('hidden'); iconPause.classList.remove('hidden'); }
-  else{ player.pause(); iconPlay.classList.remove('hidden'); iconPause.classList.add('hidden'); }
-};
-
-// Request popup
+const volume=document.getElementById('volume');
+const nowTitle=document.getElementById('nowTitle'),nowArtist=document.getElementById('nowArtist'),nowTrack=document.getElementById('nowTrack'),nowArt=document.getElementById('nowArt');
+const liveBadge=document.getElementById('liveBadge'),liveBadgeBar=document.getElementById('liveBadgeBar');
+const djRow=document.getElementById('djRow'),djName=document.getElementById('djName'),nowDJBar=document.getElementById('nowDJBar');
+const listenBtn=document.getElementById('listenBtn');
 const requestBtnBar=document.getElementById('requestBtnBar');
 const requestPopupOverlay=document.getElementById('requestPopupOverlay'),requestPopupClose=document.getElementById('requestPopupClose');
+const visualizer=document.getElementById('visualizer');
+const loadingScreen=document.getElementById('loadingScreen'),loadingLogo=document.getElementById('loadingLogo');
+const stationOffOverlay=document.getElementById('stationOffOverlay');
+const topLogo=document.getElementById('topLogo');
+
+let currentStream=null,audioCtx,analyzer,sourceNode;
+
+// Fade-in loading
+window.addEventListener('load',()=>{
+  loadingLogo.classList.add('visible');
+  setTimeout(()=>{loadingScreen.style.display='none'; topLogo.classList.add('visible');},1500);
+});
+
+// Audio controls
+function setPlayingUI(p){iconPlay.classList.toggle('hidden',p);iconPause.classList.toggle('hidden',!p);}
+playBtn.onclick=async()=>{
+  if(player.paused){
+    try{
+      if(!audioCtx){ audioCtx=new(window.AudioContext||window.webkitAudioContext)(); analyzer=audioCtx.createAnalyser(); sourceNode=audioCtx.createMediaElementSource(player); sourceNode.connect(analyzer); analyzer.connect(audioCtx.destination); startVisualizer(); }
+      else if(audioCtx.state==='suspended'){await audioCtx.resume();}
+      await player.play(); setPlayingUI(true);
+    } catch(e){ console.warn(e); }
+  } else{ player.pause(); setPlayingUI(false); }
+};
+volume.oninput=e=>player.volume=parseFloat(e.target.value);
+
+// Request popup
 requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
 requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
 requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay) requestPopupOverlay.classList.add('hidden');};
+
+// Fetch now playing
+async function fetchNow(){
+  try{
+    let r=await fetch(API,{cache:'no-store'}),d=await r.json();
+    let songTitle=get(d,'now_playing.song.title','—');
+    nowTitle.textContent=get(d,'station.name','MMG Radio');
+    nowTrack.textContent=songTitle;
+    nowArtist.textContent=get(d,'now_playing.song.artist','—');
+    let art=get(d,'now_playing.song.art'); if(art) nowArt.src=art;
+    let dj=get(d,'live.streamer_name')||get(d,'now_playing.dj');
+    if(dj){ djRow.classList.remove('hidden'); djName.textContent=dj; nowDJBar.textContent=dj; nowDJBar.classList.remove('hidden'); }
+    else{ djRow.classList.add('hidden'); nowDJBar.classList.add('hidden'); }
+    let live=get(d,'live.is_live');
+    liveBadge.classList.toggle('hidden',!live); liveBadgeBar.classList.toggle('hidden',!live);
+    let stream=get(d,'station.listen_url');
+    if(stream && stream!==currentStream){ currentStream=stream; player.src=currentStream; listenBtn.href=currentStream; listenBtn.classList.remove('hidden'); requestBtnBar.classList.remove('hidden'); }
+
+    // Station offline mode trigger
+    stationOffOverlay.style.display = songTitle.toLowerCase().includes("station offline") ? "flex" : "none";
+
+  } catch(e){ console.warn('API error',e);}
+  setTimeout(fetchNow,7000);
+}
+function get(o,p,f){return p.split('.').reduce((x,y)=>x?x[y]:undefined,o)||f;}
+
+// Visualizer
+function startVisualizer(){
+  const ctx=visualizer.getContext('2d');
+  function resize(){ visualizer.width=visualizer.clientWidth; visualizer.height=visualizer.clientHeight; }
+  resize(); window.addEventListener('resize',resize);
+  function draw(){
+    requestAnimationFrame(draw);
+    let arr=new Uint8Array(analyzer.frequencyBinCount);
+    analyzer.getByteFrequencyData(arr);
+    ctx.clearRect(0,0,visualizer.width,visualizer.height);
+    let barWidth=Math.max(2,visualizer.width/arr.length*2),x=0;
+    for(let i=0;i<arr.length;i+=4){ let v=arr[i]/255; let h=v*visualizer.height; ctx.fillStyle=`hsl(${280-v*100},80%,50%)`; ctx.fillRect(x,visualizer.height-h,barWidth,h); x+=barWidth+1; }
+  }
+  draw();
+}
+
+fetchNow();
 </script>
 </body>
 </html>
