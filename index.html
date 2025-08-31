@@ -52,6 +52,7 @@ animation: twinkle linear infinite, drift linear infinite; }
   background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
   border-radius: 1rem; padding: 2rem; margin-top:2rem;
   display:flex; flex-wrap:wrap; align-items:center; gap:1.5rem;
+  position:relative;
 }
 #startMMG img { width:250px; border-radius:1rem; }
 #startMMG .text { flex:1; color:white; }
@@ -62,6 +63,9 @@ animation: twinkle linear infinite, drift linear infinite; }
   padding:0.5rem 1rem; border-radius:9999px; transition:background 0.3s;
 }
 #startMMG .text a:hover { background:#ef4444; }
+
+/* Mini visualizer in Start at MMG */
+#miniVisualizer { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:80%; height:30px; background:rgba(255,255,255,0.05); border-radius:10px; }
 </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
@@ -132,6 +136,7 @@ animation: twinkle linear infinite, drift linear infinite; }
       <p>Join the team at MMG, become a radio operator, or find your journey in another one of our departments.</p>
       <a href="https://discord.gg/muK4TRZYQ" target="_blank">Join Discord</a>
     </div>
+    <canvas id="miniVisualizer"></canvas>
   </div>
 </section>
 
@@ -144,8 +149,33 @@ animation: twinkle linear infinite, drift linear infinite; }
 </div>
 
 <script>
-// JS: loading logo fade, top-left logo, visualizer, fetchNow + offline mode, play/pause, request popup
-// Use the previous JS code here; paths already fixed for GitHub Pages
+// Fading loading logo
+const loadingLogo=document.getElementById('loadingLogo');
+const loadingScreen=document.getElementById('loadingScreen');
+const topLogo=document.getElementById('topLogo');
+window.addEventListener('load',()=>{
+  loadingLogo.classList.add('visible');
+  setTimeout(()=>{
+    loadingScreen.style.display='none';
+    topLogo.classList.add('visible');
+  },1500);
+});
+
+// Mini visualizer
+const miniCanvas=document.getElementById('miniVisualizer');
+const miniCtx=miniCanvas.getContext('2d');
+function resizeMini(){ miniCanvas.width=miniCanvas.clientWidth; miniCanvas.height=miniCanvas.clientHeight; }
+resizeMini(); window.addEventListener('resize',resizeMini);
+function drawMini(){
+  requestAnimationFrame(drawMini);
+  miniCtx.clearRect(0,0,miniCanvas.width,miniCanvas.height);
+  for(let i=0;i<30;i++){
+    const h=Math.random()*miniCanvas.height;
+    miniCtx.fillStyle=`hsl(${200+i*5},80%,50%)`;
+    miniCtx.fillRect(i*(miniCanvas.width/30), miniCanvas.height-h, (miniCanvas.width/30)-2, h);
+  }
+}
+drawMini();
 </script>
 </body>
 </html>
