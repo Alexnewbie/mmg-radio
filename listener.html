@@ -1,128 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>MMG Radio - Live Stream</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #eee;
-      line-height: 1.6;
-    }
-    header {
-      background: #6f42c1;
-      padding: 20px;
-      text-align: center;
-      color: #fff;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .player {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-    .player img {
-      width: 200px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-      margin-bottom: 20px;
-    }
-    .btn {
-      background: #6f42c1;
-      color: #fff;
-      border: none;
-      padding: 12px 28px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .btn:hover {
-      background: #9b51e0;
-      transform: translateY(-2px);
-    }
-    .now-playing, .recently-played {
-      margin-bottom: 30px;
-    }
-    .recently-played li {
-      list-style: none;
-      margin-bottom: 10px;
-      padding: 8px;
-      background: #222;
-      border-radius: 6px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MMG Radio</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* Reset and base */
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+  body { background: #0b0b0b; color: #fff; }
+
+  header { 
+    background: linear-gradient(90deg, #6e00ff, #b100ff);
+    padding: 20px;
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  main { padding: 20px; max-width: 1000px; margin: 0 auto; }
+
+  .player { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; }
+  .album-art { width: 250px; height: 250px; border-radius: 50%; overflow: hidden; margin-bottom: 20px; box-shadow: 0 0 20px rgba(177,0,255,0.5); }
+  .album-art img { width: 100%; height: 100%; object-fit: cover; }
+  .song-info { text-align: center; margin-bottom: 20px; }
+  .song-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 5px; }
+  .song-artist { font-size: 1rem; color: #ccc; }
+
+  .play-btn { background: #b100ff; border: none; border-radius: 50%; width: 70px; height: 70px; color: #fff; font-size: 1.5rem; cursor: pointer; transition: transform 0.2s; }
+  .play-btn:hover { transform: scale(1.1); }
+
+  .recent-tracks { margin-top: 40px; }
+  .recent-tracks h2 { margin-bottom: 20px; font-size: 1.5rem; }
+  .track { display: flex; align-items: center; margin-bottom: 15px; }
+  .track-art { width: 60px; height: 60px; border-radius: 8px; overflow: hidden; margin-right: 15px; }
+  .track-art img { width: 100%; height: 100%; object-fit: cover; }
+  .track-info { display: flex; flex-direction: column; }
+  .track-title { font-weight: 600; }
+  .track-artist { font-size: 0.9rem; color: #aaa; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>🎶 MMG Radio</h1>
-    <p>Live from Typical Media</p>
-  </header>
 
-  <div class="container">
-    <div class="player">
-      <img id="cover" src="https://via.placeholder.com/200" alt="Album Art">
-      <h2 id="track-title">Loading...</h2>
-      <p id="track-artist"></p>
-      <audio id="audio" controls autoplay>
-        <source src="https://cdnstream1.typicalmedia.net/mmgradio" type="audio/mpeg">
-        Your browser does not support the audio element.
-      </audio>
-    </div>
+<header>MMG Radio</header>
 
-    <div class="now-playing">
-      <h3>Now Playing</h3>
-      <p><strong id="np-title">-</strong> by <span id="np-artist">-</span></p>
+<main>
+  <div class="player">
+    <div class="album-art"><img id="album-art" src="" alt="Album Art"></div>
+    <div class="song-info">
+      <div class="song-title" id="song-title">Loading...</div>
+      <div class="song-artist" id="song-artist"></div>
     </div>
-
-    <div class="recently-played">
-      <h3>Recently Played</h3>
-      <ul id="recent-tracks"></ul>
-    </div>
+    <button class="play-btn" id="play-btn">▶</button>
   </div>
 
-  <script>
-    async function fetchNowPlaying() {
-      try {
-        const res = await fetch("https://api.typicalmedia.net/api/v1/allnowplaying");
-        const data = await res.json();
+  <div class="recent-tracks">
+    <h2>Recently Played</h2>
+    <div id="recent-tracks-list"></div>
+  </div>
+</main>
 
-        // Find MMG Radio (id 166)
-        const station = data.find(st => st.id == 166);
-        if (!station) return;
+<script>
+  const API_URL = 'https://api.typicalmedia.com/v1/station/your-station-id'; // Replace with your Typical Media station ID
+  const albumArt = document.getElementById('album-art');
+  const songTitle = document.getElementById('song-title');
+  const songArtist = document.getElementById('song-artist');
+  const recentTracksList = document.getElementById('recent-tracks-list');
+  const playBtn = document.getElementById('play-btn');
 
-        const now = station.now_playing.song;
-        const history = station.song_history || [];
+  let audio = new Audio();
 
-        // Update now playing
-        document.getElementById("track-title").textContent = now.title || "Unknown Title";
-        document.getElementById("track-artist").textContent = now.artist || "Unknown Artist";
-        document.getElementById("np-title").textContent = now.title || "-";
-        document.getElementById("np-artist").textContent = now.artist || "-";
-        document.getElementById("cover").src = now.art || "https://via.placeholder.com/200";
-
-        // Recently played
-        const list = document.getElementById("recent-tracks");
-        list.innerHTML = "";
-        history.forEach(track => {
-          const li = document.createElement("li");
-          li.textContent = `${track.song.title} — ${track.song.artist}`;
-          list.appendChild(li);
-        });
-      } catch (err) {
-        console.error("Error fetching now playing:", err);
-      }
+  async function fetchNowPlaying() {
+    try {
+      const response = await fetch(`${API_URL}/nowplaying`);
+      const data = await response.json();
+      albumArt.src = data.current.albumArt || '';
+      songTitle.textContent = data.current.title || 'Unknown Title';
+      songArtist.textContent = data.current.artist || 'Unknown Artist';
+      audio.src = data.current.streamUrl;
+    } catch(err) {
+      console.error('Error fetching now playing:', err);
+      songTitle.textContent = 'Error loading song';
     }
+  }
 
-    // Refresh every 15s
-    fetchNowPlaying();
-    setInterval(fetchNowPlaying, 15000);
-  </script>
+  async function fetchRecentTracks() {
+    try {
+      const response = await fetch(`${API_URL}/recent`);
+      const data = await response.json();
+      recentTracksList.innerHTML = '';
+      data.recent.forEach(track => {
+        const trackEl = document.createElement('div');
+        trackEl.classList.add('track');
+        trackEl.innerHTML = `
+          <div class="track-art"><img src="${track.albumArt}" alt="${track.title}"></div>
+          <div class="track-info">
+            <div class="track-title">${track.title}</div>
+            <div class="track-artist">${track.artist}</div>
+          </div>
+        `;
+        recentTracksList.appendChild(trackEl);
+      });
+    } catch(err) {
+      console.error('Error fetching recent tracks:', err);
+      recentTracksList.innerHTML = '<p>Error loading recent tracks.</p>';
+    }
+  }
+
+  playBtn.addEventListener('click', () => {
+    if(audio.paused) {
+      audio.play();
+      playBtn.textContent = '⏸';
+    } else {
+      audio.pause();
+      playBtn.textContent = '▶';
+    }
+  });
+
+  // Auto-refresh every 30 seconds
+  fetchNowPlaying();
+  fetchRecentTracks();
+  setInterval(fetchNowPlaying, 30000);
+  setInterval(fetchRecentTracks, 30000);
+</script>
+
 </body>
 </html>
