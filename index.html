@@ -6,26 +6,20 @@
   <title>MMG Radio</title>
   <link rel="icon" href="your-logo.png" />
 
-  <!-- ✅ TailwindCSS -->
+  <!-- TailwindCSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    /* Logo Animations */
-    @keyframes slideUp {
-      from { transform: translateY(100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    @keyframes fadeOut {
-      from { opacity: 1; }
-      to { opacity: 0; visibility: hidden; }
-    }
-    @keyframes slideDown {
-      from { transform: translateY(-100%); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+    /* Animations */
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+    @keyframes moveToTopLeft {
+      0% { transform: translate(-50%, -50%) scale(1); top: 50%; left: 50%; }
+      100% { transform: translate(0,0) scale(0.25); top: 1rem; left: 1rem; }
     }
     .logo-slide { animation: slideUp 1s ease-out forwards; }
     .screen-fade { animation: fadeOut 1s ease-in forwards; }
-    .logo-top { animation: slideDown 1s ease-out forwards; }
+    .logo-move { animation: moveToTopLeft 1s ease-out forwards; }
     .live-badge { background:linear-gradient(90deg,#ef4444,#f97316); color:white; font-size:11px; font-weight:700; padding:2px 8px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px;}
 
     /* Station Off Overlay */
@@ -33,7 +27,7 @@
       position: fixed;
       inset: 0;
       background: radial-gradient(circle at top, #0a0a2a, #000);
-      display: flex;
+      display: none;
       justify-content: center;
       align-items: center;
       flex-direction: column;
@@ -41,7 +35,6 @@
       font-size: 3rem;
       font-weight: bold;
       z-index: 9998;
-      display: none; /* hidden by default */
       overflow: hidden;
     }
     .star {
@@ -52,36 +45,35 @@
       border-radius: 50%;
       animation: twinkle 2s infinite;
     }
-    @keyframes twinkle {
-      0%, 100% { opacity: 0.2; }
-      50% { opacity: 1; }
-    }
+    @keyframes twinkle { 0%,100%{opacity:0.2;} 50%{opacity:1;} }
   </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
 
-  <!-- Top-left Logo -->
-  <div id="topLogo" class="fixed top-0 left-0 m-4 h-12 w-12 opacity-0 z-50">
-    <img src="your-logo.png" class="h-full w-full object-contain">
+  <!-- Persistent Top-left Logo -->
+  <div id="topLogo" class="fixed z-50">
+    <img src="your-logo.png" class="h-12 w-12 object-contain">
   </div>
 
   <!-- Loading Screen -->
   <div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]">
-    <img src="your-logo.png" alt="MMG Logo" class="h-24 w-24 opacity-0" id="loadingLogo">
+    <img src="your-logo.png" alt="MMG Logo" class="h-24 w-24" id="loadingLogo">
   </div>
 
-  <!-- Station Off -->
-  <div id="stationOffOverlay">
-    Station Off
-  </div>
+  <!-- Station Off Overlay -->
+  <div id="stationOffOverlay">Station Off</div>
 
   <!-- Sticky Audio Bar -->
   <div id="audioBar" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[min(1100px,95vw)]">
     <div class="bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-2xl p-3 shadow-2xl shadow-black/50">
       <div class="flex items-center gap-3">
         <button id="playBtn" class="h-11 w-11 rounded-full bg-brand-500 hover:bg-brand-400 grid place-items-center" aria-label="Play/Pause">
-          <svg id="iconPlay" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"/></svg>
-          <svg id="iconPause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
+          <svg id="iconPlay" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"/>
+          </svg>
+          <svg id="iconPause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>
+          </svg>
         </button>
         <div class="min-w-0 flex-1">
           <div class="text-sm text-neutral-400">Now Playing <span id="liveBadgeBar" class="live-badge hidden">LIVE</span></div>
@@ -120,7 +112,7 @@
     </div>
   </section>
 
-  <!-- Request popup -->
+  <!-- Request Popup -->
   <div id="requestPopupOverlay" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999]">
     <div class="w-11/12 max-w-md h-[70vh] bg-neutral-900 rounded-xl relative">
       <button id="requestPopupClose" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8">&times;</button>
@@ -146,6 +138,7 @@ const topLogo = document.getElementById('topLogo');
 
 let currentStream=null,audioCtx,analyzer,sourceNode;
 
+// Play/Pause
 function setPlayingUI(p){iconPlay.classList.toggle('hidden',p);iconPause.classList.toggle('hidden',!p);}
 playBtn.onclick=async()=>{
   if(player.paused){
@@ -166,6 +159,7 @@ playBtn.onclick=async()=>{
 };
 volume.oninput=e=>player.volume=parseFloat(e.target.value);
 
+// Request popup
 requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
 requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
 requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay)requestPopupOverlay.classList.add('hidden');};
@@ -173,30 +167,32 @@ requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay)requestPopupOv
 function get(o,p,f){return p.split('.').reduce((x,y)=>x?x[y]:undefined,o)||f;}
 function sanitizeUrl(u){try{return new URL(u,location.href).href}catch{return u}}
 
+// Fetch Now Playing
 async function fetchNow(){
   try{
     let r=await fetch(API,{cache:'no-store'}),d=await r.json();
-    let stream=get(d,'station.listen_url');
-    if(!stream){
+    let title=get(d,'now_playing.song.title','—');
+    nowTitle.textContent=get(d,'station.name','MMG Radio');
+    nowTrack.textContent=title;
+    nowArtist.textContent=get(d,'now_playing.song.artist','—');
+    let art=get(d,'now_playing.song.art'); if(art) nowArt.src=sanitizeUrl(art);
+
+    // Toggle Station Off if title is "!StationOff"
+    if(title==='!StationOff'){
       stationOffOverlay.style.display='flex';
     } else {
       stationOffOverlay.style.display='none';
     }
 
-    nowTitle.textContent=get(d,'station.name','MMG Radio');
-    nowTrack.textContent=get(d,'now_playing.song.title','—');
-    nowArtist.textContent=get(d,'now_playing.song.artist','—');
-    let art=get(d,'now_playing.song.art');
-    if(art) nowArt.src=sanitizeUrl(art);
-
     let dj=get(d,'live.streamer_name')||get(d,'now_playing.dj');
-    if(dj){djRow.classList.remove('hidden');djName.textContent=dj;nowDJBar.textContent=dj;nowDJBar.classList.remove('hidden');} 
-    else {djRow.classList.add('hidden');nowDJBar.classList.add('hidden');}
+    if(dj){djRow.classList.remove('hidden'); djName.textContent=dj; nowDJBar.textContent=dj; nowDJBar.classList.remove('hidden');}
+    else{djRow.classList.add('hidden'); nowDJBar.classList.add('hidden');}
 
     let live=get(d,'live.is_live');
     liveBadge.classList.toggle('hidden',!live);
     liveBadgeBar.classList.toggle('hidden',!live);
 
+    let stream=get(d,'station.listen_url');
     if(stream && stream!==currentStream){
       currentStream=stream;
       player.src=currentStream;
@@ -208,6 +204,7 @@ async function fetchNow(){
   setTimeout(fetchNow,7000);
 }
 
+// Visualizer
 function startVisualizer(){
   const ctx=visualizer.getContext('2d');
   function resize(){visualizer.width=visualizer.clientWidth;visualizer.height=visualizer.clientHeight;}
@@ -230,17 +227,18 @@ function startVisualizer(){
   draw();
 }
 
+// Stars for Station Off
+function generateStars(count=100){
+  for(let i=0;i<count;i++){
+    const s=document.createElement('div');
+    s.className='star';
+    s.style.top=Math.random()*100+'%';
+    s.style.left=Math.random()*100+'%';
+    s.style.animationDuration=(1+Math.random()*2)+'s';
+    stationOffOverlay.appendChild(s);
+  }
+}
+
 // Loading animation
 window.addEventListener('load',()=>{
-  loadingLogo.classList.add('logo-slide');
-  topLogo.classList.add('logo-top');
-  setTimeout(()=>{
-    loadingScreen.classList.add('screen-fade');
-    setTimeout(()=>loadingScreen.remove(),1000);
-  },1500);
-});
-
-fetchNow();
-</script>
-</body>
-</html>
+  loadingLogo.class
