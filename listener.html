@@ -6,31 +6,85 @@
   <title>MMG Radio Player</title>
 
   <style>
-    /* === Inline CSS (from style.css) === */
-    /* paste everything from the CSS I gave you here */
+    body {
+      font-family: 'Red Hat Display', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f3f4f7;
+      color: #333;
+      text-align: center;
+    }
+    header, footer {
+      background: #6f42c1;
+      color: white;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    img.album_art {
+      max-width: 200px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+    }
+    button.btn {
+      background: #9b51e0;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 12px;
+    }
+    button.btn:hover {
+      background: #6f42c1;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #6f42c1;
+      color: white;
+    }
   </style>
 </head>
 <body>
-  <header class="header">
-    <h1 class="reveal">MMG Radio</h1>
-    <p class="reveal">Powered by Typical Media Group</p>
+  <header>
+    <h1>MMG Radio</h1>
+    <p>Powered by Typical Media Group</p>
   </header>
 
   <main class="container">
-    <div class="radio-player-widget">
-      <div class="card reveal">
-        <div class="now-playing-art">
-          <img class="album_art" src="https://placehold.co/300x300" alt="Album Art">
-        </div>
-        <h3>Now Playing</h3>
-        <p id="now-playing-text">Loading stream info...</p>
-        <button class="btn">Listen Live</button>
-      </div>
+    <div class="card">
+      <img id="albumArt" class="album_art" src="https://placehold.co/300x300" alt="Album Art">
+      <h3>Now Playing</h3>
+      <p id="nowPlaying">Loading...</p>
+
+      <!-- 🎶 The actual audio player -->
+      <audio id="radioPlayer" controls preload="none" style="margin-top:15px; width:100%;">
+        <source src="https://cdnstream1.typicalmedia.net/mmgradio" type="audio/mpeg">
+        Your browser does not support the audio element.
+      </audio>
     </div>
 
-    <div class="card reveal">
+    <div class="card">
       <h3>Recently Played</h3>
-      <table class="table">
+      <table>
         <thead>
           <tr>
             <th>Time</th>
@@ -38,21 +92,55 @@
             <th>Track</th>
           </tr>
         </thead>
-        <tbody>
-          <tr><td>3:30 PM</td><td>Artist 1</td><td>Track 1</td></tr>
-          <tr><td>3:25 PM</td><td>Artist 2</td><td>Track 2</td></tr>
+        <tbody id="recentTracks">
+          <tr><td>--</td><td>--</td><td>--</td></tr>
         </tbody>
       </table>
     </div>
   </main>
 
-  <footer class="footer">
-    <p class="text-center m-0">Loading footer...</p>
+  <footer>
+    <p>&copy; 2025 MMG Radio</p>
   </footer>
 
   <script>
-    /* === Inline JS (from public.js) === */
-    // paste everything from the JS I gave you here
+    const nowPlaying = document.getElementById("nowPlaying");
+    const albumArt = document.getElementById("albumArt");
+    const recentTracks = document.getElementById("recentTracks");
+
+    // 🔥 Point this to where your PHP API is hosted (on your server, not GitHub Pages)
+    const API_URL = "https://yourdomain.com/path/to/nowplaying.php";
+
+    async function updateNowPlaying() {
+      try {
+        const response = await fetch(API_URL + "?_=" + Date.now()); // prevent caching
+        const data = await response.json();
+
+        const title = data.title || "Unknown Title";
+        const artist = data.artist || "Unknown Artist";
+        const artwork = data.artwork || "https://placehold.co/300x300";
+
+        nowPlaying.textContent = `${artist} - ${title}`;
+        albumArt.src = artwork;
+
+        // Add to recent tracks table
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${new Date().toLocaleTimeString()}</td>
+                         <td>${artist}</td>
+                         <td>${title}</td>`;
+        recentTracks.prepend(row);
+
+        if (recentTracks.children.length > 5) {
+          recentTracks.removeChild(recentTracks.lastChild);
+        }
+      } catch (err) {
+        nowPlaying.textContent = "Live Stream";
+      }
+    }
+
+    // Poll every 20s
+    setInterval(updateNowPlaying, 20000);
+    updateNowPlaying();
   </script>
 </body>
 </html>
