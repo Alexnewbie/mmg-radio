@@ -22,8 +22,8 @@ body::before {
 #loadingLogo { opacity:0; transition:opacity 1s ease-out; }
 #loadingLogo.visible { opacity:1; }
 
-/* Top-left persistent logo */
-#topLogo { opacity:0; transition:opacity 1s ease-out; }
+/* Top-left persistent logo slightly offset toward center */
+#topLogo { opacity:0; transition:opacity 1s ease-out; top: 1rem; left: 2rem; }
 #topLogo.visible { opacity:1; }
 
 /* Live badge */
@@ -47,25 +47,8 @@ animation: twinkle linear infinite, drift linear infinite; }
 @keyframes twinkle {0%,100%{opacity:0.2;}50%{opacity:1;}}
 @keyframes drift {0%{transform:translate(0,0);}100%{transform:translate(var(--dx),var(--dy));}}
 
-/* Start at MMG Section */
-#startMMG {
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
-  border-radius: 1rem; padding: 2rem; margin-top:2rem;
-  display:flex; flex-wrap:wrap; align-items:center; gap:1.5rem;
-  position:relative;
-}
-#startMMG img { width:250px; border-radius:1rem; }
-#startMMG .text { flex:1; color:white; }
-#startMMG .text h2 { font-size:2rem; font-weight:bold; margin-bottom:0.5rem; }
-#startMMG .text p { margin-bottom:1rem; }
-#startMMG .text a {
-  display:inline-block; background:#f97316; color:white; font-weight:bold;
-  padding:0.5rem 1rem; border-radius:9999px; transition:background 0.3s;
-}
-#startMMG .text a:hover { background:#ef4444; }
-
-/* Mini visualizer in Start at MMG */
-#miniVisualizer { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:80%; height:30px; background:rgba(255,255,255,0.05); border-radius:10px; }
+/* Audio Visualizer */
+#visualizer { border-radius:0.5rem; }
 </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
@@ -75,8 +58,8 @@ animation: twinkle linear infinite, drift linear infinite; }
   <img src="./your-logo.png" alt="MMG Logo" class="h-24 w-24" id="loadingLogo">
 </div>
 
-<!-- Top-left persistent logo -->
-<div id="topLogo" class="fixed top-1 left-1 z-50">
+<!-- Top-left persistent logo slightly offset -->
+<div id="topLogo" class="fixed z-50">
   <img src="./your-logo.png" class="h-12 w-12 object-contain" id="logoImg">
 </div>
 
@@ -127,19 +110,6 @@ animation: twinkle linear infinite, drift linear infinite; }
   </div>
 </section>
 
-<!-- Start at MMG Section -->
-<section class="mx-auto max-w-6xl px-4 sm:px-6 py-12">
-  <div id="startMMG">
-    <img src="./banner_1.png" alt="Start at MMG">
-    <div class="text">
-      <h2>Start at MMG</h2>
-      <p>Join the team at MMG, become a radio operator, or find your journey in another one of our departments.</p>
-      <a href="https://discord.gg/muK4TRZYQ" target="_blank">Join Discord</a>
-    </div>
-    <canvas id="miniVisualizer"></canvas>
-  </div>
-</section>
-
 <!-- Request Popup -->
 <div id="requestPopupOverlay" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999]">
   <div class="w-11/12 max-w-md h-[70vh] bg-neutral-900 rounded-xl relative">
@@ -161,21 +131,35 @@ window.addEventListener('load',()=>{
   },1500);
 });
 
-// Mini visualizer
-const miniCanvas=document.getElementById('miniVisualizer');
-const miniCtx=miniCanvas.getContext('2d');
-function resizeMini(){ miniCanvas.width=miniCanvas.clientWidth; miniCanvas.height=miniCanvas.clientHeight; }
-resizeMini(); window.addEventListener('resize',resizeMini);
-function drawMini(){
-  requestAnimationFrame(drawMini);
-  miniCtx.clearRect(0,0,miniCanvas.width,miniCanvas.height);
-  for(let i=0;i<30;i++){
-    const h=Math.random()*miniCanvas.height;
-    miniCtx.fillStyle=`hsl(${200+i*5},80%,50%)`;
-    miniCtx.fillRect(i*(miniCanvas.width/30), miniCanvas.height-h, (miniCanvas.width/30)-2, h);
-  }
+// Visualizer
+const visualizer=document.getElementById('visualizer');
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const analyzer = audioCtx.createAnalyser();
+const player = document.getElementById('player');
+let sourceNode;
+function startVisualizer(){
+  if(!sourceNode){ sourceNode = audioCtx.createMediaElementSource(player); sourceNode.connect(analyzer); analyzer.connect(audioCtx.destination); }
+  const ctx = visualizer.getContext('2d');
+  function resize(){ visualizer.width = visualizer.clientWidth; visualizer.height = visualizer.clientHeight; }
+  resize(); window.addEventListener('resize',resize);
+  function draw(){ requestAnimationFrame(draw); let arr = new Uint8Array(analyzer.frequencyBinCount); analyzer.getByteFrequencyData(arr); ctx.clearRect(0,0,visualizer.width,visualizer.height); let barWidth=Math.max(2, visualizer.width/arr.length*2), x=0; for(let i=0;i<arr.length;i+=4){ let v=arr[i]/255; let h=v*visualizer.height; ctx.fillStyle=`hsl(${280-v*100},80%,50%)`; ctx.fillRect(x,visualizer.height-h,barWidth,h); x+=barWidth+1; } }
+  draw();
 }
-drawMini();
+player.onplay = ()=>{ if(audioCtx.state==='suspended'){audioCtx.resume();} startVisualizer(); };
+
+// Simple Play/Pause
+const playBtn=document.getElementById('playBtn'),iconPlay=document.getElementById('iconPlay'),iconPause=document.getElementById('iconPause');
+playBtn.onclick=async()=>{
+  if(player.paused){ await player.play(); iconPlay.classList.add('hidden'); iconPause.classList.remove('hidden'); }
+  else{ player.pause(); iconPlay.classList.remove('hidden'); iconPause.classList.add('hidden'); }
+};
+
+// Request popup
+const requestBtnBar=document.getElementById('requestBtnBar');
+const requestPopupOverlay=document.getElementById('requestPopupOverlay'),requestPopupClose=document.getElementById('requestPopupClose');
+requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
+requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
+requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay) requestPopupOverlay.classList.add('hidden');};
 </script>
 </body>
 </html>
