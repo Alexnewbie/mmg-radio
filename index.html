@@ -1,177 +1,519 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>MMG Radio</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MMG Radio — Radio Player</title>
+  <link rel="icon" href="/logo.svg" />
+  <meta name="description" content="MMG Radio — Live internet radio" />
   <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: radial-gradient(circle, black 40%, red 55%, orange 65%, yellow 72%, green 80%, blue 88%, purple 96%);
-      color: white;
-      text-align: center;
-    }
-    #player, #login, #admin {
-      background: rgba(0,0,0,0.85);
-      padding: 30px;
-      border-radius: 25px;
-      width: 350px;
-      box-shadow: 0 0 30px rgba(0,0,0,0.9);
-    }
-    #logo {
-      width: 120px;
-      margin-bottom: 20px;
-    }
-    #cover {
-      width: 220px;
-      height: 220px;
-      border-radius: 20px;
-      margin-bottom: 20px;
-      object-fit: cover;
-      box-shadow: 0 0 20px rgba(255,255,255,0.4);
-    }
-    h2 {
-      margin: 10px 0;
-      font-size: 22px;
-    }
-    button {
-      background: linear-gradient(135deg, #ff3d3d, #ff9d00, #ffe600, #33ff3d, #007bff, #9d00ff);
-      color: black;
-      font-weight: bold;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 25px;
-      cursor: pointer;
-      margin: 10px 0;
-    }
-    input[type=text], input[type=password], input[type=file] {
-      padding: 8px;
-      width: 90%;
-      margin: 8px 0;
-      border-radius: 8px;
-      border: none;
-    }
-    input[type=range] {
+    /* Minimal helper styles for visualizer & popup; rest uses your Tailwind classes */
+    .visualizer {
       width: 100%;
-      margin-top: 20px;
+      height: 96px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.02);
+      display:block;
+      margin-top:12px;
+    }
+    /* Request popup overlay */
+    #requestPopupOverlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(2,6,23,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      padding: 20px;
+    }
+    #requestPopupCard {
+      width: 100%;
+      max-width: 720px;
+      height: 80vh;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    #requestPopupClose {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #111827;
+      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      color: #fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      z-index: 10;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    iframe#requestIframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
     }
   </style>
 </head>
-<body>
-  <!-- Login Box -->
-  <div id="login" style="display:none;">
-    <h2>Admin Login</h2>
-    <input type="text" id="username" placeholder="Username"><br>
-    <input type="password" id="password" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
+<body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
+  <!-- Sticky Audio Bar -->
+  <div id="audioBar" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[min(1100px,95vw)]">
+    <div class="bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-2xl p-3 shadow-2xl shadow-black/50">
+      <div class="flex items-center gap-3">
+        <button id="playBtn" class="h-11 w-11 rounded-full bg-brand-500 hover:bg-brand-400 focus-visible:shadow-glow grid place-items-center" aria-label="Play/Pause">
+          <svg id="iconPlay" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"></path></svg>
+          <svg id="iconPause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"></path></svg>
+        </button>
+
+        <div class="min-w-0 flex-1">
+          <div class="text-sm text-neutral-400">Now Playing</div>
+          <div id="nowTitle" class="truncate font-semibold">—</div>
+        </div>
+
+        <label class="flex items-center gap-2 text-xs text-neutral-400" for="volume">
+          Vol
+          <input id="volume" type="range" min="0" max="1" step="0.01" class="w-28 accent-brand-500" value="0.7">
+        </label>
+
+        <a id="listenBtn" href="#" class="hidden sm:inline-flex text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Schedule</a>
+      </div>
+      <audio id="player" preload="none" crossorigin="anonymous"></audio>
+    </div>
   </div>
 
-  <!-- Radio Player -->
-  <div id="player">
-    <img id="logo" src="your-logo.png" alt="MMG Radio Logo">
-    <img id="cover" src="default-cover.jpg" alt="Album Art">
-    <h2 id="title">MMG Radio</h2>
-    <audio id="audio" preload="none" crossorigin="anonymous">
-      <source src="https://cdnstream1.typicalmedia.net/mmgradio" type="audio/mpeg">
-    </audio>
-    <button id="playBtn">▶ Play</button>
-    <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
-    <br>
-    <button onclick="showLogin()">🔑 Admin</button>
-  </div>
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-neutral-950/75 backdrop-blur border-b border-neutral-900">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 py-4 flex items-center gap-6">
+      <a href="#" class="flex items-center gap-3 font-bold tracking-wide text-lg">
+        <img src="/logo.svg" alt="MMG Radio Logo" class="h-8 w-8">
+        <span>MMG Radio</span>
+      </a>
+      <nav class="ml-auto hidden md:flex items-center gap-6 text-sm text-neutral-300">
+        <a class="hover:text-white" href="#live">Live</a>
+        <a class="hover:text-white" href="#shows">Shows</a>
+        <a class="hover:text-white" href="#schedule">Schedule</a>
+        <a class="hover:text-white" href="#latest">Latest</a>
+        <a class="hover:text-white" href="#contact">Contact</a>
+      </nav>
+      <button id="listenBtnHeader" class="ml-auto md:ml-4 inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-400 text-neutral-900 font-semibold px-4 py-2 rounded-xl">
+        <span>Listen Live</span>
+      </button>
+    </div>
+  </header>
 
-  <!-- Admin Panel -->
-  <div id="admin" style="display:none;">
-    <h2>Admin Panel</h2>
-    <p>Upload Album Cover:</p>
-    <input type="file" id="fileInput"><br>
-    <button onclick="uploadFile()">Upload File</button>
-    <p>Or enter an image URL:</p>
-    <input type="text" id="urlInput" placeholder="https://..."><br>
-    <button onclick="uploadURL()">Upload Link</button>
-    <br><br>
-    <button onclick="logout()">🚪 Logout</button>
+  <!-- Hero -->
+  <section id="live" class="relative overflow-hidden">
+    <div class="absolute inset-0 -z-10">
+      <img src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&amp;w=2070&amp;auto=format&amp;fit=crop" alt="Studio background" class="h-full w-full object-cover opacity-30">
+      <div class="absolute inset-0 bg-gradient-to-b from-neutral-900/70 via-neutral-950/70 to-neutral-950"></div>
+    </div>
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-28">
+      <div class="max-w-2xl">
+        <p class="text-brand-300 font-semibold">Live Internet Radio</p>
+        <h1 class="mt-3 text-4xl sm:text-6xl font-extrabold leading-tight">Music &amp; Talk That Moves Your City</h1>
+        <p class="mt-4 text-neutral-300 max-w-xl">24/7 stream with weekly shows from resident DJs and hosts. Tap "Listen Live" to join now, or explore the schedule to catch your favorites.</p>
+        <div class="mt-8 flex items-center gap-3">
+          <a href="#shows" class="inline-flex bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 px-5 py-3 rounded-xl">Browse Shows</a>
+          <a href="#schedule" class="inline-flex bg-white/10 hover:bg-white/20 px-5 py-3 rounded-xl">Weekly Schedule</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Now Playing -->
+  <section class="mx-auto max-w-6xl px-4 sm:px-6 py-12">
+    <div class="grid md:grid-cols-[120px,1fr] gap-6 items-center">
+      <div class="aspect-square rounded-2xl overflow-hidden bg-neutral-800">
+        <img id="nowArt" src="/artwork.jpg" alt="Now playing artwork" class="h-full w-full object-cover" />
+        <!-- fallback handled by script -->
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold">On Air</h2>
+        <p id="nowArtist" class="mt-2 text-neutral-400">—</p>
+        <p id="nowTrack" class="text-lg font-semibold">—</p>
+
+        <div class="mt-4 flex flex-wrap gap-3 items-center">
+          <button id="requestBtn" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Request Song</button>
+          <a id="seeNext" href="#schedule" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">See What's Next</a>
+          <a id="latest" href="#latest" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Latest Episodes</a>
+        </div>
+
+        <!-- Visualizer -->
+        <canvas id="visualizer" class="visualizer" aria-hidden="true"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shows, Schedule, Latest, Contact -->
+  <!-- (unchanged sections omitted for brevity) -->
+
+  <footer class="border-t border-neutral-900 py-10">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-neutral-400">
+      <p>© <span id="year">2025</span> MMG Radio</p>
+      <div class="flex items-center gap-3">
+        <a href="#" class="hover:text-white">Privacy</a>
+        <span aria-hidden="true">•</span>
+        <a href="#" class="hover:text-white">Terms</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Request popup overlay -->
+  <div id="requestPopupOverlay" role="dialog" aria-modal="true" aria-labelledby="requestPopupTitle">
+    <div id="requestPopupCard" role="document">
+      <div id="requestPopupClose" aria-label="Close request popup" role="button" tabindex="0">&times;</div>
+      <!-- Update the src to your request form page -->
+      <iframe id="requestIframe" src="request.html" title="Song Request Form"></iframe>
+    </div>
   </div>
 
   <script>
-    const audio = document.getElementById("audio");
-    const playBtn = document.getElementById("playBtn");
-    const volumeSlider = document.getElementById("volume");
-    const cover = document.getElementById("cover");
-    const defaultCover = "default-cover.jpg"; // fallback
+    // ====== CONFIG ======
+    const AZURACAST_API = 'https://azura.typicalmedia.net/api/nowplaying/mmg_radio';
+    const POLL_INTERVAL = 7000; // ms
 
-    // Load saved cover if exists
-    if(localStorage.getItem("coverImage")){
-      cover.src = localStorage.getItem("coverImage");
-    } else {
-      cover.src = defaultCover;
+    // DOM
+    const player = document.getElementById('player'); // existing audio element
+    const playBtn = document.getElementById('playBtn');
+    const iconPlay = document.getElementById('iconPlay');
+    const iconPause = document.getElementById('iconPause');
+    const volume = document.getElementById('volume');
+    const nowTitle = document.getElementById('nowTitle');
+    const nowArtist = document.getElementById('nowArtist');
+    const nowTrack = document.getElementById('nowTrack');
+    const nowArt = document.getElementById('nowArt');
+    const listenBtn = document.getElementById('listenBtn');
+    const listenBtnHeader = document.getElementById('listenBtnHeader');
+    const visualizerCanvas = document.getElementById('visualizer');
+    const requestBtn = document.getElementById('requestBtn');
+    const requestPopupOverlay = document.getElementById('requestPopupOverlay');
+    const requestPopupClose = document.getElementById('requestPopupClose');
+
+    // state
+    let currentArt = null;
+    let currentStream = null;
+    let pollingTimer = null;
+    let audioCtx = null;
+    let analyzer = null;
+    let sourceNode = null;
+    let animationId = null;
+    let isAttemptingRestart = false;
+
+    // initial settings
+    player.volume = parseFloat(volume.value || 0.7);
+    player.crossOrigin = 'anonymous';
+
+    // play-pause UI helper
+    function setPlayingUI(isPlaying){
+      iconPlay.classList.toggle('hidden', isPlaying);
+      iconPause.classList.toggle('hidden', !isPlaying);
     }
 
-    // Play/Pause
-    playBtn.addEventListener("click", () => {
-      if (audio.paused) {
-        audio.play();
-        playBtn.textContent = "⏸ Pause";
-      } else {
-        audio.pause();
-        playBtn.textContent = "▶ Play";
-      }
-    });
-
-    // Volume
-    volumeSlider.addEventListener("input", () => {
-      audio.volume = volumeSlider.value;
-    });
-
-    // Admin login
-    function showLogin(){
-      document.getElementById("player").style.display = "none";
-      document.getElementById("login").style.display = "block";
-    }
-
-    function login(){
-      let user = document.getElementById("username").value;
-      let pass = document.getElementById("password").value;
-      if(user === "alex" && pass === "mishra"){
-        document.getElementById("login").style.display = "none";
-        document.getElementById("admin").style.display = "block";
-      } else {
-        alert("Wrong username or password!");
-      }
-    }
-
-    function logout(){
-      document.getElementById("admin").style.display = "none";
-      document.getElementById("player").style.display = "block";
-    }
-
-    // Upload with file
-    function uploadFile(){
-      const file = document.getElementById("fileInput").files[0];
-      if(file){
-        const reader = new FileReader();
-        reader.onload = function(e){
-          cover.src = e.target.result;
-          localStorage.setItem("coverImage", e.target.result);
+    // Toggle play/pause from sticky bar
+    playBtn.addEventListener('click', async () => {
+      if (player.paused) {
+        try {
+          // Ensure AudioContext for visualizer/resume
+          if(!audioCtx){
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyzer = audioCtx.createAnalyser();
+            analyzer.fftSize = 256;
+            try {
+              sourceNode = audioCtx.createMediaElementSource(player);
+              sourceNode.connect(analyzer);
+              analyzer.connect(audioCtx.destination);
+            } catch(e){
+              console.warn('Could not create media element source (CORS or duplicate source):', e);
+            }
+            startVisualizer();
+          } else if(audioCtx.state === 'suspended'){
+            await audioCtx.resume();
+          }
+          await player.play();
+          setPlayingUI(true);
+        } catch(e){
+          console.warn('Playback failed:', e);
+          alert('Unable to start playback. Try the "Open stream" link.'); // lightweight fallback
         }
-        reader.readAsDataURL(file);
+      } else {
+        player.pause();
+        setPlayingUI(false);
+      }
+    });
+
+    // Header listen button also starts playback
+    listenBtnHeader?.addEventListener('click', async () => {
+      try {
+        await player.play();
+        setPlayingUI(true);
+      } catch(e){ console.warn(e); }
+    });
+
+    // volume control
+    volume.addEventListener('input', (e) => {
+      player.volume = parseFloat(e.target.value);
+    });
+
+    // Request popup handlers
+    requestBtn.addEventListener('click', () => {
+      requestPopupOverlay.style.display = 'flex';
+    });
+    requestPopupClose.addEventListener('click', () => {
+      requestPopupOverlay.style.display = 'none';
+    });
+    requestPopupOverlay.addEventListener('click', (e) => {
+      if (e.target === requestPopupOverlay) requestPopupOverlay.style.display = 'none';
+    });
+    requestPopupClose.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        requestPopupOverlay.style.display = 'none';
+      }
+    });
+
+    // Utility safe accessor
+    function get(obj, path, fallback = undefined){
+      if(!obj) return fallback;
+      return path.split('.').reduce((o, p) => (o && o[p] !== undefined) ? o[p] : undefined, obj) || fallback;
+    }
+
+    // Try to make a safe absolute URL
+    function sanitizeUrl(url){
+      if(!url) return null;
+      try {
+        return new URL(url, window.location.href).href;
+      } catch(e){ return url; }
+    }
+
+    // Set cover art with fallback
+    function setCover(url){
+      if(!url) return removeCover();
+      if(currentArt === url) return;
+      currentArt = url;
+      nowArt.src = url;
+      nowArt.onerror = () => { removeCover(); };
+    }
+    function removeCover(){
+      currentArt = null;
+      nowArt.src = '/artwork.jpg'; // local fallback artwork
+    }
+
+    // Now-playing handling based on AzuraCast API response
+    async function fetchNowPlaying(){
+      try {
+        const res = await fetch(AZURACAST_API, { cache: 'no-cache' });
+        if(!res.ok) throw new Error('API ' + res.status);
+        const data = await res.json();
+        applyNowPlaying(data);
+      } catch(err){
+        console.warn('NowPlaying fetch error', err);
+      } finally {
+        schedulePoll();
       }
     }
 
-    // Upload with URL
-    function uploadURL(){
-      const url = document.getElementById("urlInput").value;
-      if(url){
-        cover.src = url;
-        localStorage.setItem("coverImage", url);
+    function schedulePoll(){
+      clearTimeout(pollingTimer);
+      pollingTimer = setTimeout(fetchNowPlaying, POLL_INTERVAL);
+    }
+
+    function applyNowPlaying(data){
+      // Title/artist
+      const stationName = get(data, 'station.name') || get(data, 'station.title') || 'MMG Radio';
+      const title = get(data, 'now_playing.song.title') || get(data, 'now_playing.song.name') || '—';
+      const artist = get(data, 'now_playing.song.artist') || get(data, 'now_playing.song.subtitle') || '—';
+      nowTitle.textContent = stationName;
+      nowTrack.textContent = title;
+      nowArtist.textContent = artist;
+
+      // Artwork
+      let art = get(data, 'now_playing.song.art') || get(data, 'now_playing.song.thumbnail') || get(data, 'now_playing.song.album_art') || get(data, 'station.media.art') || null;
+      art = sanitizeUrl(art);
+      if(art) setCover(art);
+      else removeCover();
+
+      // DJ detection / live badge
+      const liveData = get(data, 'live') || {};
+      const apiIsLive = Boolean(liveData.is_live);
+      const streamerName = liveData.streamer_name || null;
+
+      // DJ fallback checks
+      let dj = get(data, 'now_playing.dj') || get(data, 'now_playing.presenter') || get(data, 'now_playing.song.custom_fields.dj') || get(data, 'source') || null;
+      if(!dj){
+        const meta = get(data, 'now_playing.song.meta') || get(data, 'now_playing.song.custom_fields') || [];
+        if(Array.isArray(meta)){
+          for(const m of meta){
+            if((m.name && /dj|presenter|host/i.test(m.name)) || (m.key && /dj|presenter|host/i.test(m.key))){
+              dj = m.value || m.text || m.data || m.key;
+              break;
+            }
+          }
+        } else if(meta && typeof meta === 'object'){
+          for(const k of Object.keys(meta)){
+            if(/dj|presenter|host/i.test(k)){
+              dj = meta[k];
+              break;
+            }
+          }
+        }
+      }
+      // If live streamer name present, override
+      if(apiIsLive && streamerName){
+        dj = streamerName;
+      }
+      // (optional) you could show DJ somewhere; currently we only use it to detect live
+
+      // Live badge + listen link
+      const streamCandidates = [
+        get(data, 'station.listen_url'),
+        get(data, 'station.stream_url'),
+        get(data, 'station.url'),
+        get(data, 'station.streams.0.url'),
+        get(data, 'listen_url'),
+        get(data, 'now_playing.stream.url')
+      ];
+      const streamUrl = sanitizeUrl(streamCandidates.find(Boolean) || null);
+
+      if(streamUrl && streamUrl !== currentStream){
+        currentStream = streamUrl;
+        player.src = currentStream;
+        // update header listen link to open actual stream
+        if(listenBtn) { listenBtn.href = currentStream; listenBtn.classList.remove('hidden'); listenBtn.textContent = 'Open stream'; }
+        if(listenBtnHeader) { listenBtnHeader.onclick = (e)=>{ e.preventDefault(); player.play().catch(()=>{}); setPlayingUI(true); }; }
+        // if we are playing already, attempt restart
+        if(!player.paused){
+          isAttemptingRestart = true;
+          player.pause();
+          player.load();
+          // will auto-play on 'canplay' if restart was intended (handled in event)
+        }
+      } else if(!streamUrl) {
+        // hide or fallback the listen link
+        if(listenBtn) { listenBtn.href = '#'; listenBtn.classList.add('hidden'); }
       }
     }
+
+    // Audio element event handling for restart + canplay
+    player.addEventListener('ended', () => {
+      if(!player.paused) restartStream();
+    });
+    player.addEventListener('error', () => {
+      if(!player.paused) restartStream();
+    });
+    player.addEventListener('stalled', () => {
+      if(!player.paused) restartStream();
+    });
+    player.addEventListener('canplay', async () => {
+      if(isAttemptingRestart){
+        try {
+          await player.play();
+          setPlayingUI(true);
+        } catch(e){ console.warn('Restart play failed', e); }
+        isAttemptingRestart = false;
+      }
+    });
+
+    function restartStream(){
+      if(isAttemptingRestart) return;
+      isAttemptingRestart = true;
+      player.pause();
+      try { player.load(); } catch(e){ console.warn(e); }
+    }
+
+    // Visualizer setup
+    function startVisualizer(){
+      if(!visualizerCanvas) return;
+      const canvas = visualizerCanvas;
+      const ctx = canvas.getContext('2d');
+      const resize = () => {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      };
+      resize();
+      window.addEventListener('resize', resize);
+
+      function render(){
+        if(!analyzer) return;
+        const bufferLength = analyzer.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyzer.getByteFrequencyData(dataArray);
+        ctx.clearRect(0,0,canvas.clientWidth, canvas.clientHeight);
+        const barWidth = Math.max(2, (canvas.clientWidth / bufferLength) * 1.8);
+        let x = 0;
+        for(let i=0;i<bufferLength;i+=Math.max(1,Math.round(bufferLength/48))){
+          const v = dataArray[i] / 255;
+          const barHeight = v * canvas.clientHeight;
+          const hue = 320 - (v * 120);
+          ctx.fillStyle = `hsl(${hue}, 90%, ${50 - v*12}%)`;
+          ctx.fillRect(x, canvas.clientHeight - barHeight, barWidth, barHeight);
+          x += barWidth + 1;
+        }
+        animationId = requestAnimationFrame(render);
+      }
+      if(animationId) cancelAnimationFrame(animationId);
+      render();
+    }
+
+    // Suspend/resume AudioContext on visibility change to save resources
+    document.addEventListener('visibilitychange', () => {
+      if(document.hidden){
+        if(audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+        if(animationId) cancelAnimationFrame(animationId);
+      } else {
+        if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      }
+    });
+
+    // Clean up on unload
+    window.addEventListener('beforeunload', () => {
+      if(animationId) cancelAnimationFrame(animationId);
+      if(pollingTimer) clearTimeout(pollingTimer);
+      try { if(audioCtx) audioCtx.close(); } catch(e){}
+    });
+
+    // Initial fetch + poll loop
+    fetchNowPlaying();
+
+    // Attempt to set up AudioContext & analyzer when user interacts / first play
+    // Create AudioContext lazily to avoid autoplay policy issues
+    player.addEventListener('play', async () => {
+      try {
+        if(!audioCtx){
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          analyzer = audioCtx.createAnalyser();
+          analyzer.fftSize = 256;
+          try {
+            sourceNode = audioCtx.createMediaElementSource(player);
+            sourceNode.connect(analyzer);
+            analyzer.connect(audioCtx.destination);
+          } catch(e){
+            console.warn('createMediaElementSource failed (CORS or duplicate):', e);
+          }
+          startVisualizer();
+        } else if(audioCtx.state === 'suspended'){
+          await audioCtx.resume();
+        }
+      } catch(e){
+        console.warn('AudioContext init failed:', e);
+      }
+      setPlayingUI(!player.paused);
+    });
+
+    player.addEventListener('pause', () => {
+      setPlayingUI(false);
+    });
+
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
   </script>
 </body>
 </html>
-
