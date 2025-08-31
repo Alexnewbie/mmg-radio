@@ -3,75 +3,37 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MMG Radio — Radio Player</title>
+  <title>MMG Radio</title>
   <link rel="icon" href="/logo.svg" />
+
+  <!-- ✅ TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
-    /* --- Extra styling for badge, DJ row, fallback --- */
-    .live-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: linear-gradient(90deg, #ef4444, #f97316);
-      color: white;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 9999px;
+    /* Custom Animations */
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
-    .dj-row {
-      margin-top: 6px;
-      font-size: 13px;
-      color: #9ca3af;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; visibility: hidden; }
     }
-    .fallback-note {
-      margin-top: 8px;
-      font-size: 13px;
-      color: #f87171;
-      display: none;
-    }
-    .visualizer {
-      width: 100%;
-      height: 80px;
-      border-radius: 8px;
-      margin-top: 12px;
-      background: rgba(255,255,255,0.03);
-    }
-    #requestPopupOverlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    #requestPopupCard {
-      width: 90%;
-      max-width: 600px;
-      height: 70vh;
-      background: #111827;
-      border-radius: 12px;
-      position: relative;
-      overflow: hidden;
-    }
-    #requestPopupClose {
-      position: absolute;
-      top: 10px; right: 10px;
-      width: 28px; height: 28px;
-      background: #ef4444;
-      color: white;
-      border-radius: 50%;
-      font-weight: bold;
-      text-align: center;
-      line-height: 28px;
-      cursor: pointer;
-    }
-    #requestIframe { width:100%; height:100%; border:0; }
+    .logo-slide { animation: slideUp 1s ease-out forwards; }
+    .screen-fade { animation: fadeOut 1s ease-in forwards; }
+    /* Visualizer styling */
+    #visualizer { width:100%; height:80px; border-radius:8px; margin-top:12px; background:rgba(255,255,255,0.05);}
+    /* Live badge */
+    .live-badge { background:linear-gradient(90deg,#ef4444,#f97316); color:white; font-size:11px; font-weight:700; padding:2px 8px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px;}
   </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
+
+  <!-- Loading Screen -->
+  <div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]">
+    <img src="/logo.svg" alt="MMG Logo" class="h-24 w-24 opacity-0" id="loadingLogo">
+  </div>
+
   <!-- Sticky Audio Bar -->
   <div id="audioBar" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[min(1100px,95vw)]">
     <div class="bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-2xl p-3 shadow-2xl shadow-black/50">
@@ -81,12 +43,13 @@
           <svg id="iconPause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
         </button>
         <div class="min-w-0 flex-1">
-          <div class="text-sm text-neutral-400">Now Playing</div>
+          <div class="text-sm text-neutral-400">Now Playing <span id="liveBadgeBar" class="live-badge hidden">LIVE</span></div>
           <div id="nowTitle" class="truncate font-semibold">—</div>
+          <div id="nowDJBar" class="text-xs text-neutral-400 hidden"></div>
         </div>
         <label class="flex items-center gap-2 text-xs text-neutral-400" for="volume">
           Vol
-          <input id="volume" type="range" min="0" max="1" step="0.01" class="w-28 accent-brand-500" value="0.7">
+          <input id="volume" type="range" min="0" max="1" step="0.01" class="w-24 accent-brand-500" value="0.7">
         </label>
         <a id="listenBtn" href="#" target="_blank" class="hidden sm:inline-flex text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Open Stream</a>
       </div>
@@ -96,8 +59,13 @@
 
   <!-- Hero -->
   <section id="live" class="relative overflow-hidden">
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-28">
-      <h1 class="text-4xl font-extrabold">Music &amp; Talk That Moves Your City</h1>
+    <div class="absolute inset-0 -z-10">
+      <img src="https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=2070&auto=format&fit=crop" alt="Studio background" class="h-full w-full object-cover opacity-30">
+      <div class="absolute inset-0 bg-gradient-to-b from-neutral-900/70 via-neutral-950/70 to-neutral-950"></div>
+    </div>
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-28 text-center">
+      <p class="text-brand-300 font-semibold">Live Internet Radio</p>
+      <h1 class="mt-3 text-4xl sm:text-6xl font-extrabold leading-tight animate-pulse">Music &amp; Talk That Moves Your City</h1>
     </div>
   </section>
 
@@ -108,111 +76,48 @@
         <img id="nowArt" src="/artwork.jpg" alt="Now playing artwork" class="h-full w-full object-cover">
       </div>
       <div>
-        <h2 class="text-2xl font-bold flex items-center gap-3">
-          On Air <span id="liveBadge" class="live-badge hidden">LIVE</span>
-        </h2>
+        <h2 class="text-2xl font-bold flex items-center gap-3">On Air <span id="liveBadge" class="live-badge hidden">LIVE</span></h2>
         <p id="nowArtist" class="mt-2 text-neutral-400">—</p>
         <p id="nowTrack" class="text-lg font-semibold">—</p>
-        <p id="djRow" class="dj-row hidden"><strong id="djName">DJ</strong></p>
-        <p id="fallbackMsg" class="fallback-note">⚠️ Playback blocked — use the "Open Stream" link above.</p>
-        <div class="mt-4 flex gap-3">
-          <button id="requestBtn" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2">Request Song</button>
-        </div>
+        <p id="djRow" class="text-sm text-neutral-400 hidden">DJ: <span id="djName"></span></p>
         <canvas id="visualizer" class="visualizer"></canvas>
       </div>
     </div>
   </section>
 
   <!-- Request popup -->
-  <div id="requestPopupOverlay">
-    <div id="requestPopupCard">
-      <div id="requestPopupClose">&times;</div>
-      <iframe id="requestIframe" src="request.html" title="Song Request Form"></iframe>
+  <div id="requestPopupOverlay" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999]">
+    <div class="w-11/12 max-w-md h-[70vh] bg-neutral-900 rounded-xl relative">
+      <button id="requestPopupClose" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8">&times;</button>
+      <iframe id="requestIframe" src="request.html" class="w-full h-full border-0 rounded-xl"></iframe>
     </div>
   </div>
 
 <script>
 const API = 'https://azura.typicalmedia.net/api/nowplaying/mmg_radio';
-const player = document.getElementById('player');
-const playBtn = document.getElementById('playBtn');
-const iconPlay = document.getElementById('iconPlay');
-const iconPause = document.getElementById('iconPause');
-const volume = document.getElementById('volume');
-const nowTitle = document.getElementById('nowTitle');
-const nowArtist = document.getElementById('nowArtist');
-const nowTrack = document.getElementById('nowTrack');
-const nowArt = document.getElementById('nowArt');
-const liveBadge = document.getElementById('liveBadge');
-const djRow = document.getElementById('djRow');
-const djName = document.getElementById('djName');
-const fallbackMsg = document.getElementById('fallbackMsg');
-const listenBtn = document.getElementById('listenBtn');
-const requestBtn = document.getElementById('requestBtn');
-const requestPopupOverlay = document.getElementById('requestPopupOverlay');
-const requestPopupClose = document.getElementById('requestPopupClose');
-const visualizer = document.getElementById('visualizer');
+const player=document.getElementById('player');
+const playBtn=document.getElementById('playBtn'),iconPlay=document.getElementById('iconPlay'),iconPause=document.getElementById('iconPause');
+const volume=document.getElementById('volume'),nowTitle=document.getElementById('nowTitle'),nowArtist=document.getElementById('nowArtist'),nowTrack=document.getElementById('nowTrack'),nowArt=document.getElementById('nowArt');
+const liveBadge=document.getElementById('liveBadge'),liveBadgeBar=document.getElementById('liveBadgeBar');
+const djRow=document.getElementById('djRow'),djName=document.getElementById('djName'),nowDJBar=document.getElementById('nowDJBar');
+const listenBtn=document.getElementById('listenBtn');
+const visualizer=document.getElementById('visualizer');
+const loadingScreen=document.getElementById('loadingScreen'),loadingLogo=document.getElementById('loadingLogo');
 
-let currentStream=null, audioCtx, analyzer, sourceNode, animationId;
+let currentStream=null,audioCtx,analyzer,sourceNode;
 
-function setPlayingUI(isPlaying){
-  iconPlay.classList.toggle('hidden', isPlaying);
-  iconPause.classList.toggle('hidden', !isPlaying);
-}
-playBtn.onclick=async()=>{
-  if(player.paused){
-    try{
-      if(!audioCtx){
-        audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-        analyzer=audioCtx.createAnalyser();analyzer.fftSize=256;
-        sourceNode=audioCtx.createMediaElementSource(player);
-        sourceNode.connect(analyzer);analyzer.connect(audioCtx.destination);
-        startVisualizer();
-      } else if(audioCtx.state==='suspended'){await audioCtx.resume();}
-      await player.play();setPlayingUI(true);fallbackMsg.style.display='none';
-    }catch(e){console.warn(e);fallbackMsg.style.display='block';}
-  } else {player.pause();setPlayingUI(false);}
-};
+function setPlayingUI(isPlaying){iconPlay.classList.toggle('hidden',isPlaying);iconPause.classList.toggle('hidden',!isPlaying);}
+playBtn.onclick=async()=>{if(player.paused){try{if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();analyzer=audioCtx.createAnalyser();analyzer.fftSize=256;sourceNode=audioCtx.createMediaElementSource(player);sourceNode.connect(analyzer);analyzer.connect(audioCtx.destination);startVisualizer();}else if(audioCtx.state==='suspended'){await audioCtx.resume();}await player.play();setPlayingUI(true);}catch(e){console.warn(e);}}else{player.pause();setPlayingUI(false);}};
 volume.oninput=e=>player.volume=parseFloat(e.target.value);
 
-requestBtn.onclick=()=>{requestPopupOverlay.style.display='flex';};
-requestPopupClose.onclick=()=>{requestPopupOverlay.style.display='none';};
-requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay)requestPopupOverlay.style.display='none';};
-
-function get(obj,path,fallback){return path.split('.').reduce((o,p)=>o?o[p]:undefined,obj)||fallback;}
-function sanitizeUrl(url){try{return new URL(url,location.href).href}catch{return url}}
-
-async function fetchNow(){
-  try{
-    let res=await fetch(API,{cache:'no-store'}),data=await res.json();
-    nowTitle.textContent=get(data,'station.name','MMG Radio');
-    nowTrack.textContent=get(data,'now_playing.song.title','—');
-    nowArtist.textContent=get(data,'now_playing.song.artist','—');
-    let art=get(data,'now_playing.song.art')||get(data,'station.media.art'); if(art) nowArt.src=sanitizeUrl(art);
-    let dj=get(data,'live.streamer_name')||get(data,'now_playing.dj'); 
-    if(dj){djRow.classList.remove('hidden');djName.textContent=dj;} else djRow.classList.add('hidden');
-    liveBadge.classList.toggle('hidden',!get(data,'live.is_live'));
-    let stream=get(data,'station.listen_url'); 
-    if(stream && stream!==currentStream){currentStream=stream;player.src=currentStream;listenBtn.href=currentStream;listenBtn.classList.remove('hidden');}
-  }catch(e){console.warn('API error',e);}
-  setTimeout(fetchNow,7000);
-}
-function startVisualizer(){
-  let ctx=visualizer.getContext('2d');
-  function draw(){
-    requestAnimationFrame(draw);
-    let arr=new Uint8Array(analyzer.frequencyBinCount);
-    analyzer.getByteFrequencyData(arr);
-    ctx.clearRect(0,0,visualizer.width,visualizer.height);
-    let barWidth=visualizer.width/arr.length*2,x=0;
-    arr.forEach(v=>{
-      let h=v/255*visualizer.height;
-      ctx.fillStyle=`hsl(${300-v/2},80%,50%)`;
-      ctx.fillRect(x,visualizer.height-h,barWidth,h);
-      x+=barWidth+1;
-    });
-  } draw();
-}
+function get(o,p,f){return p.split('.').reduce((x,y)=>x?x[y]:undefined,o)||f;}
+function sanitizeUrl(u){try{return new URL(u,location.href).href}catch{return u}}
+async function fetchNow(){try{let r=await fetch(API,{cache:'no-store'}),d=await r.json();nowTitle.textContent=get(d,'station.name','MMG Radio');nowTrack.textContent=get(d,'now_playing.song.title','—');nowArtist.textContent=get(d,'now_playing.song.artist','—');let art=get(d,'now_playing.song.art');if(art)nowArt.src=sanitizeUrl(art);let dj=get(d,'live.streamer_name')||get(d,'now_playing.dj');if(dj){djRow.classList.remove('hidden');djName.textContent=dj;nowDJBar.textContent=dj;nowDJBar.classList.remove('hidden');}else{djRow.classList.add('hidden');nowDJBar.classList.add('hidden');}let live=get(d,'live.is_live');liveBadge.classList.toggle('hidden',!live);liveBadgeBar.classList.toggle('hidden',!live);let stream=get(d,'station.listen_url');if(stream&&stream!==currentStream){currentStream=stream;player.src=currentStream;listenBtn.href=currentStream;listenBtn.classList.remove('hidden');}}catch(e){console.warn('API error',e);}setTimeout(fetchNow,7000);}
+function startVisualizer(){let ctx=visualizer.getContext('2d');function draw(){requestAnimationFrame(draw);let arr=new Uint8Array(analyzer.frequencyBinCount);analyzer.getByteFrequencyData(arr);ctx.clearRect(0,0,visualizer.width,visualizer.height);let bw=visualizer.width/arr.length*2,x=0;arr.forEach(v=>{let h=v/255*visualizer.height;ctx.fillStyle=`hsl(${300-v/2},80%,50%)`;ctx.fillRect(x,visualizer.height-h,bw,h);x+=bw+1;});}draw();}
 fetchNow();
+
+// Loading screen animation
+window.addEventListener('load',()=>{loadingLogo.classList.add('logo-slide');setTimeout(()=>{loadingScreen.classList.add('screen-fade');setTimeout(()=>loadingScreen.remove(),1000);},1500);});
 </script>
 </body>
 </html>
