@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>MMG Radio</title>
-<link rel="icon" href="your-logo.png" />
+<link rel="icon" href="./your-logo.png" />
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
@@ -13,28 +13,18 @@ body::before {
   content:'';
   position:fixed;
   inset:0;
-  background:url('your-background.png') center/cover no-repeat;
+  background:url('./your-background.png') center/cover no-repeat;
   filter:blur(8px);
   z-index:-1;
 }
 
 /* Fade-in Loading logo */
-#loadingLogo {
-  opacity: 0;
-  transition: opacity 1s ease-out;
-}
-#loadingLogo.visible {
-  opacity: 1;
-}
+#loadingLogo { opacity:0; transition:opacity 1s ease-out; }
+#loadingLogo.visible { opacity:1; }
 
 /* Top-left persistent logo */
-#topLogo {
-  opacity: 0;
-  transition: opacity 1s ease-out;
-}
-#topLogo.visible {
-  opacity: 1;
-}
+#topLogo { opacity:0; transition:opacity 1s ease-out; }
+#topLogo.visible { opacity:1; }
 
 /* Live badge */
 .live-badge {
@@ -46,73 +36,44 @@ body::before {
 
 /* Station Offline / Night Mode */
 #stationOffOverlay {
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: radial-gradient(circle at top, #0a0a2a, #000);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  color: #fff;
-  font-size: 3rem;
-  font-weight: bold;
-  z-index: 9998;
-  overflow: hidden;
+  display: none; justify-content: center; align-items: center;
+  flex-direction: column; color: #fff; font-size: 3rem; font-weight: bold;
+  z-index: 9998; overflow: hidden;
 }
-.star {
-  position: absolute;
-  width: 2px;
-  height: 2px;
-  background: white;
-  border-radius: 50%;
-  animation: twinkle linear infinite, drift linear infinite;
-}
-@keyframes twinkle { 0%,100%{opacity:0.2;}50%{opacity:1;} }
-@keyframes drift { 0%{transform:translate(0,0);} 100%{transform:translate(var(--dx), var(--dy));} }
+.star { position:absolute; width:2px; height:2px; background:white; border-radius:50%;
+animation: twinkle linear infinite, drift linear infinite; }
+@keyframes twinkle {0%,100%{opacity:0.2;}50%{opacity:1;}}
+@keyframes drift {0%{transform:translate(0,0);}100%{transform:translate(var(--dx),var(--dy));}}
 
-/* New section styles */
+/* Start at MMG Section */
 #startMMG {
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(6px);
-  border-radius: 1rem;
-  padding: 2rem;
-  margin-top:2rem;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+  border-radius: 1rem; padding: 2rem; margin-top:2rem;
   display:flex; flex-wrap:wrap; align-items:center; gap:1.5rem;
 }
-#startMMG img {
-  width:250px; border-radius:1rem;
-}
-#startMMG .text {
-  flex:1;
-  color:white;
-}
-#startMMG .text h2 {
-  font-size:2rem; font-weight:bold; margin-bottom:0.5rem;
-}
-#startMMG .text p {
-  margin-bottom:1rem;
-}
+#startMMG img { width:250px; border-radius:1rem; }
+#startMMG .text { flex:1; color:white; }
+#startMMG .text h2 { font-size:2rem; font-weight:bold; margin-bottom:0.5rem; }
+#startMMG .text p { margin-bottom:1rem; }
 #startMMG .text a {
-  display:inline-block;
-  background:#f97316;
-  color:white; font-weight:bold;
-  padding:0.5rem 1rem;
-  border-radius:9999px;
-  transition:background 0.3s;
+  display:inline-block; background:#f97316; color:white; font-weight:bold;
+  padding:0.5rem 1rem; border-radius:9999px; transition:background 0.3s;
 }
-#startMMG .text a:hover {background:#ef4444;}
+#startMMG .text a:hover { background:#ef4444; }
 </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
 
 <!-- Loading Screen -->
 <div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]">
-  <img src="your-logo.png" alt="MMG Logo" class="h-24 w-24" id="loadingLogo">
+  <img src="./your-logo.png" alt="MMG Logo" class="h-24 w-24" id="loadingLogo">
 </div>
 
 <!-- Top-left persistent logo -->
 <div id="topLogo" class="fixed top-1 left-1 z-50">
-  <img src="your-logo.png" class="h-12 w-12 object-contain" id="logoImg">
+  <img src="./your-logo.png" class="h-12 w-12 object-contain" id="logoImg">
 </div>
 
 <!-- Station Offline Overlay -->
@@ -150,7 +111,7 @@ body::before {
 <section class="mx-auto max-w-6xl px-4 sm:px-6 py-12">
   <div class="grid md:grid-cols-[120px,1fr] gap-6 items-center">
     <div class="aspect-square rounded-2xl overflow-hidden bg-neutral-800">
-      <img id="nowArt" src="your-logo.png" alt="Now playing artwork" class="h-full w-full object-cover">
+      <img id="nowArt" src="./your-logo.png" alt="Now playing artwork" class="h-full w-full object-cover">
     </div>
     <div>
       <h2 class="text-2xl font-bold flex items-center gap-3">On Air <span id="liveBadge" class="live-badge hidden">LIVE</span></h2>
@@ -165,7 +126,7 @@ body::before {
 <!-- Start at MMG Section -->
 <section class="mx-auto max-w-6xl px-4 sm:px-6 py-12">
   <div id="startMMG">
-    <img src="banner_1.png" alt="Start at MMG">
+    <img src="./banner_1.png" alt="Start at MMG">
     <div class="text">
       <h2>Start at MMG</h2>
       <p>Join the team at MMG, become a radio operator, or find your journey in another one of our departments.</p>
@@ -183,8 +144,8 @@ body::before {
 </div>
 
 <script>
-// JS is same as previous: loading logo fade, top-left logo, fetchNow + offline mode, visualizer, play/pause, request popup
-// (You can reuse the JS from the previous full HTML)!
+// JS: loading logo fade, top-left logo, visualizer, fetchNow + offline mode, play/pause, request popup
+// Use the previous JS code here; paths already fixed for GitHub Pages
 </script>
 </body>
 </html>
