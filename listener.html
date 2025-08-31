@@ -1,146 +1,128 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <title>MMG Radio - Live Stream</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MMG Radio Player</title>
-
   <style>
     body {
-      font-family: 'Red Hat Display', sans-serif;
       margin: 0;
-      padding: 0;
-      background: #f3f4f7;
-      color: #333;
-      text-align: center;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      line-height: 1.6;
     }
-    header, footer {
+    header {
       background: #6f42c1;
-      color: white;
       padding: 20px;
+      text-align: center;
+      color: #fff;
     }
     .container {
-      max-width: 800px;
-      margin: auto;
+      max-width: 900px;
+      margin: 0 auto;
       padding: 20px;
     }
-    .card {
-      background: white;
+    .player {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .player img {
+      width: 200px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
       margin-bottom: 20px;
     }
-    img.album_art {
-      max-width: 200px;
-      border-radius: 12px;
-      margin-bottom: 15px;
-    }
-    button.btn {
-      background: #9b51e0;
-      color: white;
+    .btn {
+      background: #6f42c1;
+      color: #fff;
       border: none;
-      padding: 12px 24px;
-      border-radius: 12px;
-      cursor: pointer;
+      padding: 12px 28px;
+      border-radius: 8px;
       font-weight: bold;
-      margin-top: 12px;
+      cursor: pointer;
+      transition: 0.2s;
     }
-    button.btn:hover {
-      background: #6f42c1;
+    .btn:hover {
+      background: #9b51e0;
+      transform: translateY(-2px);
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    .now-playing, .recently-played {
+      margin-bottom: 30px;
     }
-    th, td {
-      padding: 10px;
-      border: 1px solid #ddd;
-    }
-    th {
-      background: #6f42c1;
-      color: white;
+    .recently-played li {
+      list-style: none;
+      margin-bottom: 10px;
+      padding: 8px;
+      background: #222;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>MMG Radio</h1>
-    <p>Powered by Typical Media Group</p>
+    <h1>🎶 MMG Radio</h1>
+    <p>Live from Typical Media</p>
   </header>
 
-  <main class="container">
-    <div class="card">
-      <img id="albumArt" class="album_art" src="https://placehold.co/300x300" alt="Album Art">
-      <h3>Now Playing</h3>
-      <p id="nowPlaying">Loading...</p>
-
-      <!-- 🎶 The actual audio player -->
-      <audio id="radioPlayer" controls preload="none" style="margin-top:15px; width:100%;">
+  <div class="container">
+    <div class="player">
+      <img id="cover" src="https://via.placeholder.com/200" alt="Album Art">
+      <h2 id="track-title">Loading...</h2>
+      <p id="track-artist"></p>
+      <audio id="audio" controls autoplay>
         <source src="https://cdnstream1.typicalmedia.net/mmgradio" type="audio/mpeg">
         Your browser does not support the audio element.
       </audio>
     </div>
 
-    <div class="card">
-      <h3>Recently Played</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Artist</th>
-            <th>Track</th>
-          </tr>
-        </thead>
-        <tbody id="recentTracks">
-          <tr><td>--</td><td>--</td><td>--</td></tr>
-        </tbody>
-      </table>
+    <div class="now-playing">
+      <h3>Now Playing</h3>
+      <p><strong id="np-title">-</strong> by <span id="np-artist">-</span></p>
     </div>
-  </main>
 
-  <footer>
-    <p>&copy; 2025 MMG Radio</p>
-  </footer>
+    <div class="recently-played">
+      <h3>Recently Played</h3>
+      <ul id="recent-tracks"></ul>
+    </div>
+  </div>
 
   <script>
-    const nowPlaying = document.getElementById("nowPlaying");
-    const albumArt = document.getElementById("albumArt");
-    const recentTracks = document.getElementById("recentTracks");
-
-    // 🔥 Point this to where your PHP API is hosted (on your server, not GitHub Pages)
-    const API_URL = "https://yourdomain.com/path/to/nowplaying.php";
-
-    async function updateNowPlaying() {
+    async function fetchNowPlaying() {
       try {
-        const response = await fetch(API_URL + "?_=" + Date.now()); // prevent caching
-        const data = await response.json();
+        const res = await fetch("https://api.typicalmedia.net/api/v1/allnowplaying");
+        const data = await res.json();
 
-        const title = data.title || "Unknown Title";
-        const artist = data.artist || "Unknown Artist";
-        const artwork = data.artwork || "https://placehold.co/300x300";
+        // Find MMG Radio (id 166)
+        const station = data.find(st => st.id == 166);
+        if (!station) return;
 
-        nowPlaying.textContent = `${artist} - ${title}`;
-        albumArt.src = artwork;
+        const now = station.now_playing.song;
+        const history = station.song_history || [];
 
-        // Add to recent tracks table
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${new Date().toLocaleTimeString()}</td>
-                         <td>${artist}</td>
-                         <td>${title}</td>`;
-        recentTracks.prepend(row);
+        // Update now playing
+        document.getElementById("track-title").textContent = now.title || "Unknown Title";
+        document.getElementById("track-artist").textContent = now.artist || "Unknown Artist";
+        document.getElementById("np-title").textContent = now.title || "-";
+        document.getElementById("np-artist").textContent = now.artist || "-";
+        document.getElementById("cover").src = now.art || "https://via.placeholder.com/200";
 
-        if (recentTracks.children.length > 5) {
-          recentTracks.removeChild(recentTracks.lastChild);
-        }
+        // Recently played
+        const list = document.getElementById("recent-tracks");
+        list.innerHTML = "";
+        history.forEach(track => {
+          const li = document.createElement("li");
+          li.textContent = `${track.song.title} — ${track.song.artist}`;
+          list.appendChild(li);
+        });
       } catch (err) {
-        nowPlaying.textContent = "Live Stream";
+        console.error("Error fetching now playing:", err);
       }
     }
 
-    // Poll every 20s
-    setInterval(updateNowPlaying, 20000);
-    updateNowPlaying();
+    // Refresh every 15s
+    fetchNowPlaying();
+    setInterval(fetchNowPlaying, 15000);
   </script>
 </body>
 </html>
