@@ -11,6 +11,7 @@
 /* Loading screen logo fade */
 #loadingLogo {
   opacity: 0;
+  transform: scale(0.8);
   transition: opacity 1s ease-out, transform 1s ease-out;
 }
 #loadingLogo.visible {
@@ -64,14 +65,14 @@
 </head>
 <body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
 
-<!-- Persistent Top-left Logo -->
-<div id="topLogo" class="fixed top-1 left-1 z-50">
-  <img src="your-logo.png" class="h-12 w-12 object-contain" id="logoImg">
-</div>
-
 <!-- Loading Screen -->
 <div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]">
   <img src="your-logo.png" alt="MMG Logo" class="h-24 w-24" id="loadingLogo">
+</div>
+
+<!-- Persistent Top-left Logo -->
+<div id="topLogo" class="fixed top-1 left-1 z-50">
+  <img src="your-logo.png" class="h-12 w-12 object-contain" id="logoImg">
 </div>
 
 <!-- Station Offline Overlay -->
@@ -152,7 +153,7 @@ const topLogo=document.getElementById('topLogo');
 
 let currentStream=null,audioCtx,analyzer,sourceNode;
 
-// Play/Pause
+// PLAY/PAUSE
 function setPlayingUI(p){iconPlay.classList.toggle('hidden',p);iconPause.classList.toggle('hidden',!p);}
 playBtn.onclick=async()=>{
   if(player.paused){
@@ -171,4 +172,13 @@ playBtn.onclick=async()=>{
     } catch(e){console.warn(e);}
   } else {player.pause(); setPlayingUI(false);}
 };
-volume.oninput=e=>player
+volume.oninput=e=>player.volume=parseFloat(e.target.value);
+
+// REQUEST POPUP
+requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
+requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
+requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay) requestPopupOverlay.classList.add('hidden');};
+
+// Loading Screen Fade
+window.addEventListener('load',()=>{
+  loadingLogo.class
