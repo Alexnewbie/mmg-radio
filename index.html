@@ -1,70 +1,59 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MMG Radio</title>
-  <link rel="icon" href="your-logo.png" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MMG Radio</title>
+<link rel="icon" href="your-logo.png" />
+<script src="https://cdn.tailwindcss.com"></script>
 
-  <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* Logo fade in */
+  @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+  .logo-fade { animation: fadeIn 1s ease-out forwards; }
 
-  <style>
-    /* Animations */
-    @keyframes moveToTopLeft {
-      0% { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1); }
-      100% { top: 1rem; left: 1rem; transform: translate(0, 0) scale(0.25); }
-    }
-    .logo-move { animation: moveToTopLeft 1s ease-out forwards; }
+  .live-badge {
+    background: linear-gradient(90deg,#ef4444,#f97316);
+    color:white; font-size:11px; font-weight:700;
+    padding:2px 8px; border-radius:9999px;
+    display:inline-flex; align-items:center; gap:4px;
+  }
 
-    .live-badge {
-      background: linear-gradient(90deg,#ef4444,#f97316);
-      color:white;
-      font-size:11px;
-      font-weight:700;
-      padding:2px 8px;
-      border-radius:9999px;
-      display:inline-flex;
-      align-items:center;
-      gap:4px;
-    }
-
-    /* Station Off Overlay */
-    #stationOffOverlay {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at top, #0a0a2a, #000);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      color: #fff;
-      font-size: 3rem;
-      font-weight: bold;
-      z-index: 9998;
-      overflow: hidden;
-    }
-    .star {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: white;
-      border-radius: 50%;
-      animation: twinkle 2s infinite;
-    }
-    @keyframes twinkle {
-      0%, 100% { opacity: 0.2; }
-      50% { opacity: 1; }
-    }
-  </style>
+  /* Station Offline / Night Mode */
+  #stationOffOverlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at top, #0a0a2a, #000);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: #fff;
+    font-size: 3rem;
+    font-weight: bold;
+    z-index: 9998;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle linear infinite, drift linear infinite;
+  }
+  @keyframes twinkle { 0%,100%{opacity:0.2;}50%{opacity:1;} }
+  @keyframes drift { 0%{transform:translate(0,0);} 100%{transform:translate(var(--dx), var(--dy));} }
+</style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 selection:bg-brand-400/40">
 
   <!-- Persistent Top-left Logo -->
-  <div id="topLogo" class="fixed z-50">
-    <img src="your-logo.png" class="h-12 w-12 object-contain">
+  <div id="topLogo" class="fixed top-1 left-1 z-50 opacity-0">
+    <img src="your-logo.png" class="h-12 w-12 object-contain" id="logoImg">
   </div>
 
-  <!-- Loading Screen Logo -->
+  <!-- Loading Screen -->
   <div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]">
     <img src="your-logo.png" alt="MMG Logo" class="h-24 w-24" id="loadingLogo">
   </div>
@@ -153,112 +142,4 @@ playBtn.onclick=async()=>{
   if(player.paused){
     try{
       if(!audioCtx){
-        audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-        analyzer=audioCtx.createAnalyser();
-        analyzer.fftSize=256;
-        sourceNode=audioCtx.createMediaElementSource(player);
-        sourceNode.connect(analyzer);
-        analyzer.connect(audioCtx.destination);
-        startVisualizer();
-      }else if(audioCtx.state==='suspended'){await audioCtx.resume();}
-      await player.play();
-      setPlayingUI(true);
-    }catch(e){console.warn(e);}
-  }else{player.pause();setPlayingUI(false);}
-};
-volume.oninput=e=>player.volume=parseFloat(e.target.value);
-
-// Request popup
-requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
-requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
-requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay)requestPopupOverlay.classList.add('hidden');};
-
-function get(o,p,f){return p.split('.').reduce((x,y)=>x?x[y]:undefined,o)||f;}
-function sanitizeUrl(u){try{return new URL(u,location.href).href}catch{return u}}
-
-// Visualizer
-function startVisualizer(){
-  const ctx=visualizer.getContext('2d');
-  function resize(){visualizer.width=visualizer.clientWidth;visualizer.height=visualizer.clientHeight;}
-  resize();
-  window.addEventListener('resize',resize);
-  function draw(){
-    requestAnimationFrame(draw);
-    let arr=new Uint8Array(analyzer.frequencyBinCount);
-    analyzer.getByteFrequencyData(arr);
-    ctx.clearRect(0,0,visualizer.width,visualizer.height);
-    let barWidth=Math.max(2,visualizer.width/arr.length*2),x=0;
-    for(let i=0;i<arr.length;i+=4){
-      let v=arr[i]/255;
-      let h=v*visualizer.height;
-      ctx.fillStyle=`hsl(${280-v*100},80%,50%)`;
-      ctx.fillRect(x,visualizer.height-h,barWidth,h);
-      x+=barWidth+1;
-    }
-  }
-  draw();
-}
-
-// Stars
-function generateStars(count=100){
-  for(let i=0;i<count;i++){
-    const s=document.createElement('div');
-    s.className='star';
-    s.style.top=Math.random()*100+'%';
-    s.style.left=Math.random()*100+'%';
-    s.style.animationDuration=(1+Math.random()*2)+'s';
-    stationOffOverlay.appendChild(s);
-  }
-}
-
-// Fetch Now Playing
-async function fetchNow(){
-  try{
-    let r=await fetch(API,{cache:'no-store'}),d=await r.json();
-    let title=get(d,'now_playing.song.title','—');
-    nowTitle.textContent=get(d,'station.name','MMG Radio');
-    nowTrack.textContent=title;
-    nowArtist.textContent=get(d,'now_playing.song.artist','—');
-    let art=get(d,'now_playing.song.art'); if(art) nowArt.src=sanitizeUrl(art);
-
-    // Station Offline toggle
-    if(title==='Station Offline'){
-      stationOffOverlay.style.display='flex';
-    } else {
-      stationOffOverlay.style.display='none';
-    }
-
-    let dj=get(d,'live.streamer_name')||get(d,'now_playing.dj');
-    if(dj){djRow.classList.remove('hidden'); djName.textContent=dj; nowDJBar.textContent=dj; nowDJBar.classList.remove('hidden');}
-    else{djRow.classList.add('hidden'); nowDJBar.classList.add('hidden');}
-
-    let live=get(d,'live.is_live');
-    liveBadge.classList.toggle('hidden',!live);
-    liveBadgeBar.classList.toggle('hidden',!live);
-
-    let stream=get(d,'station.listen_url');
-    if(stream && stream!==currentStream){
-      currentStream=stream;
-      player.src=currentStream;
-      listenBtn.href=currentStream;
-      listenBtn.classList.remove('hidden');
-      requestBtnBar.classList.remove('hidden');
-    }
-  }catch(e){console.warn('API error',e);}
-  setTimeout(fetchNow,7000);
-}
-
-// Loading animation + move logo
-window.addEventListener('load',()=>{
-  generateStars(100);
-  loadingLogo.classList.add('logo-move');
-  setTimeout(()=>{
-    loadingScreen.classList.add('screen-fade');
-    setTimeout(()=>loadingScreen.remove(),1000);
-  },1200);
-});
-
-fetchNow();
-</script>
-</body>
-</html>
+        audioCtx=new(window.AudioContext
