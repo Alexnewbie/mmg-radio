@@ -1,205 +1,368 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>MMG Radio - Accessible Version</title>
-<link rel="icon" href="./your-logo.png" />
-<script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AzuraCast Radio Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #A30000;
+        }
+        .player-card {
+            background-color: #A30000;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .play-button-wrapper {
+            background: white;
+            border-radius: 50%;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.2s ease-in-out, background-color 0.2s;
+        }
+        .play-button-wrapper:hover:not(:disabled) {
+            transform: scale(1.1);
+        }
+        .play-button-wrapper:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+        .play-icon, .pause-icon {
+            color: #A30000;
+        }
+        #albumArt {
+            min-height: 250px;
+        }
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -5px;
+            background-color: #fff;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+        }
+        @keyframes animStar {
+          from { transform: translateY(0px); }
+          to { transform: translateY(-2000px); }
+        }
+        .stars-bg {
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+            overflow: hidden;
+        }
+        .stars {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%; display: block;
+        }
 
-<style>
-/* High contrast background & text */
-body {
-  background-color:#000;
-  color:#fff;
-  font-family:sans-serif;
-  line-height:1.6;
-}
-
-/* Reduce motion for accessibility */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
-/* Logo fade */
-#loadingLogo { opacity:0; transition:opacity 1s ease-out; }
-#loadingLogo.visible { opacity:1; }
-
-/* Top-left logo */
-#topLogo { opacity:0; transition:opacity 1s ease-out; top: 1rem; left: 2rem; }
-#topLogo.visible { opacity:1; }
-
-/* Live badge */
-.live-badge {
-  background: #ff0000;
-  color:#fff; font-weight:bold;
-  padding:2px 8px; border-radius:9999px;
-  display:inline-flex; align-items:center; gap:4px;
-}
-
-/* Station Offline / Night Mode */
-#stationOffOverlay {
-  position: fixed; inset: 0;
-  background: radial-gradient(circle at top, #0a0a2a, #000);
-  display: none; justify-content: center; align-items: center;
-  flex-direction: column; color: #fff; font-size: 3rem; font-weight: bold;
-  z-index: 9998; overflow: hidden;
-}
-
-/* Star animation for offline */
-.star { position:absolute; width:2px; height:2px; background:white; border-radius:50%;
-animation: twinkle linear infinite, drift linear infinite; }
-@keyframes twinkle {0%,100%{opacity:0.2;}50%{opacity:1;}}
-@keyframes drift {0%{transform:translate(0,0);}100%{transform:translate(var(--dx),var(--dy));}}
-
-/* Visualizer accessible */
-#visualizer { border-radius:0.5rem; outline:2px solid #fff; }
-</style>
+        /* Advertisement badge */
+        .ad-badge {
+            display: inline-block;
+            background-color: #FFD700;
+            color: #A30000;
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            margin-left: 8px;
+            border-radius: 6px;
+            vertical-align: middle;
+            text-transform: uppercase;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+    </style>
 </head>
-<body>
+<body class="flex items-center justify-center min-h-screen p-4">
 
-<!-- Loading Screen -->
-<div id="loadingScreen" class="fixed inset-0 bg-black flex items-center justify-center z-[9999]" role="status" aria-live="polite">
-  <img src="./your-logo.png" alt="Loading MMG Logo" class="h-24 w-24" id="loadingLogo">
-</div>
-
-<!-- Top-left logo -->
-<div id="topLogo" class="fixed z-50">
-  <img src="./your-logo.png" class="h-12 w-12 object-contain" id="logoImg" alt="MMG Radio Logo">
-</div>
-
-<!-- Station Offline Overlay -->
-<div id="stationOffOverlay" role="alert" aria-live="assertive">Station Offline</div>
-
-<!-- Sticky Audio Bar -->
-<div id="audioBar" class="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 w-[min(1100px,95vw)]" role="region" aria-label="Audio Player">
-  <div class="bg-neutral-900/90 backdrop-blur border border-neutral-800 rounded-2xl p-3 shadow-2xl shadow-black/50">
-    <div class="flex items-center gap-3">
-      <button id="playBtn" class="h-11 w-11 rounded-full bg-brand-500 hover:bg-brand-400 grid place-items-center focus:outline focus:outline-2 focus:outline-white" aria-label="Play/Pause" aria-pressed="false">
-        <svg id="iconPlay" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3l14 9-14 9V3z"/></svg>
-        <svg id="iconPause" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
-      </button>
-      <div class="min-w-0 flex-1">
-        <div class="text-lg font-bold" id="nowTitle" aria-live="polite">—</div>
-        <div class="text-sm" id="nowArtist" aria-live="polite">—</div>
-        <div class="text-xs text-neutral-400 hidden" id="nowDJBar"></div>
-      </div>
-      <label class="flex items-center gap-2 text-sm" for="volume">
-        Volume
-        <input id="volume" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume Control">
-      </label>
-      <button id="requestBtnBar" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2 focus:outline focus:outline-2 focus:outline-white">Request Song</button>
-      <a id="listenBtn" href="#" target="_blank" class="text-sm bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-xl px-3 py-2 focus:outline focus:outline-2 focus:outline-white">Open Stream</a>
+    <!-- Offline Mode Screen -->
+    <div id="offline-container" class="fixed inset-0 z-40 hidden">
+        <div class="absolute inset-0 stars-bg">
+            <div id="stars1"></div>
+            <div id="stars2"></div>
+            <div id="stars3"></div>
+        </div>
+        <div class="relative z-10 flex flex-col items-center justify-center h-full text-white">
+            <h2 class="text-4xl md:text-5xl font-black uppercase">Radio Offline</h2>
+            <p class="text-lg md:text-xl text-white/70 mt-2">Could not connect to the stream.</p>
+        </div>
     </div>
-    <audio id="player" preload="none" crossorigin="anonymous" aria-label="Radio Stream Player"></audio>
-  </div>
-</div>
 
-<!-- Now Playing -->
-<section class="mx-auto max-w-6xl px-4 sm:px-6 py-12" role="region" aria-label="Now Playing Section">
-  <div class="grid md:grid-cols-[120px,1fr] gap-6 items-center">
-    <div class="aspect-square rounded-2xl overflow-hidden bg-neutral-800">
-      <img id="nowArt" src="./your-logo.png" alt="Now playing artwork" class="h-full w-full object-cover">
+    <!-- Configuration Modal -->
+    <div id="configModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Setup Your Radio Player</h2>
+            <p class="mb-6 text-gray-600">Configuration is pre-filled. Just hit start!</p>
+            <div>
+                <label for="azuraUrl" class="block text-sm font-medium text-gray-700">AzuraCast URL</label>
+                <input type="text" id="azuraUrl" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., https://your-radio.com">
+                 <p class="mt-2 text-xs text-gray-500">This is the main URL for your AzuraCast instance.</p>
+            </div>
+             <div class="mt-4">
+                <label for="stationId" class="block text-sm font-medium text-gray-700">Station Shortcode or ID</label>
+                <input type="text" id="stationId" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g., radio or 1">
+                 <p class="mt-2 text-xs text-gray-500">Find this in your AzuraCast station profile. It's often called the "Station Shortcode".</p>
+            </div>
+            <button id="saveConfig" class="mt-6 w-full bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                Start Player
+            </button>
+        </div>
     </div>
-    <div>
-      <h2 class="text-2xl font-bold flex items-center gap-3">On Air <span id="liveBadge" class="live-badge hidden">LIVE</span></h2>
-      <p id="nowArtist" class="mt-2">—</p>
-      <p id="nowTrack" class="text-lg font-semibold">—</p>
-      <p id="djRow" class="text-sm hidden">DJ: <span id="djName"></span></p>
-      <canvas id="visualizer" class="w-full h-20 mt-4 rounded-lg bg-neutral-800" aria-label="Audio Visualizer"></canvas>
+
+    <!-- Main Player -->
+    <div class="player-card text-white rounded-2xl p-6 md:p-8 w-full max-w-4xl opacity-0 transition-opacity duration-500" id="player-container">
+        <header class="mb-6">
+            <div id="logo-container" class="w-24 h-8 border-2 border-dashed border-white/50 flex items-center justify-center">
+                 <span class="text-white/50 text-sm">Your Logo</span>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="w-full">
+                <img id="albumArt" src="https://placehold.co/400x400/1a1a1a/ffffff?text=Loading..." alt="Album Art" class="rounded-lg shadow-lg w-full aspect-square object-cover">
+            </div>
+
+            <div class="flex flex-col justify-center">
+                <h1 id="mainTitle" class="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-wide">SAFE4WORK</h1>
+                <p id="stationName" class="text-xl md:text-2xl text-white/80 mt-1">Loading Station...</p>
+                <hr class="border-white/20 my-6">
+
+                <div class="flex flex-col">
+                    <p id="nowPlayingArtist" class="text-2xl md:text-3xl font-bold">Loading Artist...</p>
+                    <p id="nowPlayingTitle" class="text-2xl md:text-3xl text-white/70">Loading Title...</p>
+                </div>
+                
+                <div class="mt-8 flex flex-col gap-4">
+                    <div class="flex items-center gap-4">
+                        <button id="playBtn" class="play-button-wrapper" disabled>
+                            <svg class="play-icon h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
+                            <svg class="pause-icon h-8 w-8 hidden" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h1a1 1 0 001-1V8a1 1 0 00-1-1H8zm3 0a1 1 0 00-1 1v4a1 1 0 001 1h1a1 1 0 001-1V8a1 1 0 00-1-1h-1z" clip-rule="evenodd" /></svg>
+                        </button>
+                        <div class="flex-grow flex items-center gap-4 bg-black/10 p-2 rounded-full">
+                           <div id="visualizerToggleBtn" class="p-2 cursor-pointer rounded-full hover:bg-white/20 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l11 13H9z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 19V6l11 13H5z" opacity="0.5"/>
+                                </svg>
+                           </div>
+                           <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="1">
+                        </div>
+                    </div>
+                    <canvas id="visualizer" class="w-full" height="80"></canvas>
+                </div>
+            </div>
+        </main>
     </div>
-  </div>
-</section>
 
-<!-- Request Popup -->
-<div id="requestPopupOverlay" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[9999]" role="dialog" aria-modal="true" aria-label="Request Song">
-  <div class="w-11/12 max-w-md h-[70vh] bg-neutral-900 rounded-xl relative">
-    <button id="requestPopupClose" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8" aria-label="Close Request Popup">&times;</button>
-    <iframe id="requestIframe" src="request.html" class="w-full h-full border-0 rounded-xl" title="Request Song Form"></iframe>
-  </div>
-</div>
+    <audio id="audioStream" crossorigin="anonymous" preload="none"></audio>
 
-<script>
-// Same JS as before with metadata, player, visualizer, and offline overlay
-const API='https://azura.typicalmedia.net/api/nowplaying/mmg_radio';
-const player=document.getElementById('player');
-const playBtn=document.getElementById('playBtn'),iconPlay=document.getElementById('iconPlay'),iconPause=document.getElementById('iconPause');
-const volume=document.getElementById('volume');
-const nowTitle=document.getElementById('nowTitle'),nowArtist=document.getElementById('nowArtist'),nowTrack=document.getElementById('nowTrack'),nowArt=document.getElementById('nowArt');
-const liveBadge=document.getElementById('liveBadge'),liveBadgeBar=document.getElementById('liveBadgeBar');
-const djRow=document.getElementById('djRow'),djName=document.getElementById('djName'),nowDJBar=document.getElementById('nowDJBar');
-const listenBtn=document.getElementById('listenBtn');
-const requestBtnBar=document.getElementById('requestBtnBar');
-const requestPopupOverlay=document.getElementById('requestPopupOverlay'),requestPopupClose=document.getElementById('requestPopupClose');
-const visualizer=document.getElementById('visualizer');
-const loadingScreen=document.getElementById('loadingScreen'),loadingLogo=document.getElementById('loadingLogo');
-const stationOffOverlay=document.getElementById('stationOffOverlay');
-const topLogo=document.getElementById('topLogo');
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const configModal = document.getElementById('configModal');
+            const saveConfigBtn = document.getElementById('saveConfig');
+            const azuraUrlInput = document.getElementById('azuraUrl');
+            const stationIdInput = document.getElementById('stationId');
+            const playerContainer = document.getElementById('player-container');
+            const offlineContainer = document.getElementById('offline-container');
+            const stationName = document.getElementById('stationName');
+            const albumArt = document.getElementById('albumArt');
+            const nowPlayingArtist = document.getElementById('nowPlayingArtist');
+            const nowPlayingTitle = document.getElementById('nowPlayingTitle');
+            const playBtn = document.getElementById('playBtn');
+            const playIcon = playBtn.querySelector('.play-icon');
+            const pauseIcon = playBtn.querySelector('.pause-icon');
+            const audioStream = document.getElementById('audioStream');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const visualizerToggleBtn = document.getElementById('visualizerToggleBtn');
+            const canvas = document.getElementById('visualizer');
+            const canvasCtx = canvas.getContext('2d');
+            
+            let audioContext, analyser, source, animationFrameId;
+            let AZURA_URL = '', STATION_ID = '', currentStreamUrl = '';
+            let isVisualizerOn = true;
 
-let currentStream=null,audioCtx,analyzer,sourceNode;
+            function startVisualizer() {
+                if (!isVisualizerOn || animationFrameId || !analyser) return;
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                function draw() {
+                    animationFrameId = requestAnimationFrame(draw);
+                    analyser.getByteFrequencyData(dataArray);
+                    canvasCtx.fillStyle = '#A30000';
+                    canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                    const barWidth = (canvas.width / bufferLength) * 1.5;
+                    let x = 0;
+                    const gradient = canvasCtx.createLinearGradient(0, 0, 0, canvas.height);
+                    gradient.addColorStop(0, '#ffb8b8');
+                    gradient.addColorStop(0.5, '#ffffff');
+                    gradient.addColorStop(1, '#ffb8b8');
+                    for(let i = 0; i < bufferLength; i++) {
+                        const barHeight = dataArray[i] / 2.5;
+                        canvasCtx.fillStyle = gradient;
+                        canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                        x += barWidth + 2;
+                    }
+                }
+                draw();
+            }
 
-window.addEventListener('load',()=>{
-  loadingLogo.classList.add('visible');
-  setTimeout(()=>{loadingScreen.style.display='none'; topLogo.classList.add('visible');},1500);
-});
+            function stopVisualizer() {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
 
-function setPlayingUI(p){iconPlay.classList.toggle('hidden',p);iconPause.classList.toggle('hidden',!p);}
-playBtn.onclick=async()=>{
-  if(player.paused){
-    try{
-      if(!audioCtx){ audioCtx=new(window.AudioContext||window.webkitAudioContext)(); analyzer=audioCtx.createAnalyser(); sourceNode=new MediaElementAudioSourceNode(audioCtx, {mediaElement:player}); sourceNode.connect(analyzer); analyzer.connect(audioCtx.destination); startVisualizer(); }
-      else if(audioCtx.state==='suspended'){await audioCtx.resume();}
-      await player.play(); setPlayingUI(true);
-    } catch(e){ console.warn(e); }
-  } else{ player.pause(); setPlayingUI(false); }
-};
-volume.oninput=e=>player.volume=parseFloat(e.target.value);
+            async function fetchNowPlaying() {
+                if (!AZURA_URL || !STATION_ID) return;
+                try {
+                    const apiUrl = `${AZURA_URL}/api/nowplaying/${STATION_ID}`;
+                    const response = await fetch(apiUrl, { cache: 'no-store' });
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+                    if (!offlineContainer.classList.contains('hidden')) {
+                        offlineContainer.classList.add('hidden');
+                        playerContainer.classList.remove('opacity-0');
+                    }
+                    updatePlayer(data);
+                } catch (error) {
+                    console.error("Error fetching AzuraCast data:", error);
+                    playerContainer.classList.add('opacity-0');
+                    offlineContainer.classList.remove('hidden');
+                    if (!audioStream.paused) {
+                        audioStream.pause();
+                        setUiPaused();
+                    }
+                } finally {
+                    setTimeout(fetchNowPlaying, 7000);
+                }
+            }
 
-requestBtnBar.onclick=()=>{requestPopupOverlay.classList.remove('hidden');};
-requestPopupClose.onclick=()=>{requestPopupOverlay.classList.add('hidden');};
-requestPopupOverlay.onclick=e=>{if(e.target===requestPopupOverlay) requestPopupOverlay.classList.add('hidden');};
+            function updatePlayer(data) {
+                stationName.textContent = data.station.name || 'Loading...';
+                nowPlayingArtist.textContent = data.now_playing.song.artist || 'Unknown Artist';
+                
+                const titleText = data.now_playing.song.title || 'Unknown Title';
+                nowPlayingTitle.textContent = titleText;
 
-async function fetchNow(){
-  try{
-    let r=await fetch(API,{cache:'no-store'}),d=await r.json();
-    let songTitle=d.now_playing.song.title || '—';
-    nowTitle.textContent=d.station.name || 'MMG Radio';
-    nowTrack.textContent=songTitle;
-    nowArtist.textContent=d.now_playing.song.artist || '—';
-    let art=d.now_playing.song.art; if(art) nowArt.src=art;
-    let dj=d.live.streamer_name||d.now_playing.dj;
-    if(dj){ djRow.classList.remove('hidden'); djName.textContent=dj; nowDJBar.textContent=dj; nowDJBar.classList.remove('hidden'); }
-    else{ djRow.classList.add('hidden'); nowDJBar.classList.add('hidden'); }
-    let live=d.live.is_live;
-    liveBadge.classList.toggle('hidden',!live); liveBadgeBar.classList.toggle('hidden',!live);
-    let stream=d.station.listen_url;
-    if(stream && stream!==currentStream){ currentStream=stream; player.src=currentStream; listenBtn.href=currentStream; listenBtn.classList.remove('hidden'); requestBtnBar.classList.remove('hidden'); }
+                // Show "Advertisement" badge if title indicates sponsored content
+                if (titleText.toLowerCase().includes('sponsored content')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'ad-badge';
+                    badge.textContent = 'Advertisement';
+                    nowPlayingTitle.appendChild(badge);
+                }
 
-    stationOffOverlay.style.display = songTitle.toLowerCase().includes("station offline") ? "flex" : "none";
+                albumArt.src = data.now_playing.song.art || 'https://placehold.co/400x400/1a1a1a/ffffff?text=No+Art';
+                const listenUrl = data.station.listen_url;
+                if (listenUrl && listenUrl !== currentStreamUrl) {
+                    currentStreamUrl = listenUrl;
+                    audioStream.src = currentStreamUrl;
+                }
+                if(currentStreamUrl) {
+                    playBtn.disabled = false;
+                }
+            }
 
-  } catch(e){ console.warn('API error',e);}
-  setTimeout(fetchNow,7000);
-}
+            function setUiPlaying() {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            }
+            function setUiPaused() {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            }
 
-function startVisualizer(){
-  const ctx=visualizer.getContext('2d');
-  function resize(){ visualizer.width=visualizer.clientWidth; visualizer.height=visualizer.clientHeight; }
-  resize(); window.addEventListener('resize',resize);
-  function draw(){
-    requestAnimationFrame(draw);
-    let arr=new Uint8Array(analyzer.frequencyBinCount);
-    analyzer.getByteFrequencyData(arr);
-    ctx.clearRect(0,0,visualizer.width,visualizer.height);
-    let barWidth=Math.max(2,visualizer.width/arr.length*2),x=0;
-    for(let i=0;i<arr.length;i+=4){ let v=arr[i]/255; let h=v*visualizer.height; ctx.fillStyle=`hsl(${280-v*100},80%,50%)`; ctx.fillRect(x,visualizer.height-h,barWidth,h); x+=barWidth+1; }
-  }
-  draw();
-}
+            async function togglePlay() {
+                if (!audioContext) {
+                    try {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        analyser = audioContext.createAnalyser();
+                        source = audioContext.createMediaElementSource(audioStream);
+                        source.connect(analyser);
+                        analyser.connect(audioContext.destination);
+                    } catch(e) {
+                        console.error('Web Audio API not supported.', e);
+                        visualizerToggleBtn.style.display = 'none';
+                        canvas.style.display = 'none';
+                        isVisualizerOn = false;
+                    }
+                }
+                if (audioContext.state === 'suspended') await audioContext.resume();
+                if (audioStream.paused) {
+                    try {
+                        await audioStream.play();
+                        setUiPlaying();
+                        startVisualizer();
+                    } catch (e) { console.error("Error playing audio:", e); }
+                } else {
+                    audioStream.pause();
+                    setUiPaused();
+                    stopVisualizer();
+                }
+            }
 
-fetchNow();
-</script>
-</body>
-</html>
+            function startPlayer() {
+                configModal.style.display = 'none';
+                playerContainer.classList.remove('opacity-0');
+                fetchNowPlaying();
+            }
+
+            playBtn.addEventListener('click', togglePlay);
+            volumeSlider.addEventListener('input', e => audioStream.volume = e.target.value);
+            visualizerToggleBtn.addEventListener('click', () => {
+                isVisualizerOn = !isVisualizerOn;
+                visualizerToggleBtn.classList.toggle('bg-white/20', isVisualizerOn);
+                if (isVisualizerOn && !audioStream.paused) startVisualizer();
+                else stopVisualizer();
+            });
+
+            saveConfigBtn.addEventListener('click', () => {
+                let url = azuraUrlInput.value.trim();
+                const station = stationIdInput.value.trim();
+                if (url && station) {
+                    if (url.endsWith('/')) url = url.slice(0, -1);
+                    AZURA_URL = url;
+                    STATION_ID = station;
+                    localStorage.setItem('azuraUrl', AZURA_URL);
+                    localStorage.setItem('stationId', STATION_ID);
+                    startPlayer();
+                } else {
+                    const tempAlert = document.createElement('div');
+                    tempAlert.textContent = 'Please fill in both fields.';
+                    tempAlert.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:white;color:black;padding:10px 20px;border-radius:8px;z-index:100;';
+                    document.body.appendChild(tempAlert);
+                    setTimeout(() => tempAlert.remove(), 3000);
+                }
+            });
+
+            const savedUrl = localStorage.getItem('azuraUrl');
+            const savedStationId = localStorage.getItem('stationId');
+            if (savedUrl && savedStationId) {
+                AZURA_URL = savedUrl;
+                STATION_ID = savedStationId;
+               
